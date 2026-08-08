@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>건강비서 — 건강일기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">건</span>
+      <span class="brand-name">건강비서</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-item"><span class="nav-dot"></span>개인정보</div>
+      <div class="nav-item active"><span class="nav-dot"></span>건강일기</div>
+      <div class="nav-item"><span class="nav-dot"></span>생활 바이오리듬</div>
+    </nav>
+    <div class="family">
+      <div class="family-label">가족 구성원</div>
+      <div class="family-list">
+        <div class="family-item active" data-member="self"><span class="family-avatar">나</span>본인<span class="family-count">4건</span></div>
+        <div class="family-item" data-member="spouse"><span class="family-avatar">배</span>배우자<span class="family-count">1건</span></div>
+        <div class="family-item" data-member="seojun"><span class="family-avatar">아</span>서준<span class="family-count">2건</span></div>
+        <div class="family-item family-add"><span class="family-avatar">+</span>구성원 추가</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="page-name">건강일기</span>
+        <span class="topbar-sep"></span>
+        <span class="patient-name">본인 · 김하늘</span>
+      </div>
+      <div class="ai-search">
+        <span class="ai-search-icon"></span>
+        <input type="text" placeholder="&ldquo;작년에 어떤 증상으로 이비인후과 갔지?&rdquo;">
+        <span class="ai-search-badge">AI</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn">PDF</button>
+        <button class="btn">메일 전송</button>
+        <span class="avatar-badge">나</span>
+      </div>
+    </header>
+
+    <nav class="subtabs">
+      <div class="subtab active" data-tab="today">오늘 기록</div>
+      <div class="subtab" data-tab="visit">병원 방문</div>
+      <div class="subtab" data-tab="rx">처방전</div>
+      <div class="subtab" data-tab="checkup">접종 · 검진</div>
+      <div class="subtab" data-tab="photo">사진 기록</div>
+      <div class="subtab" data-tab="report">통계 · 리포트</div>
+      <div class="view-toggle-wrap">
+        <span class="view-toggle-label">보기</span>
+        <div class="view-toggle">
+          <button class="active" data-view="daily">일별</button>
+          <button data-view="list">목록</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="content-grid">
+
+      <section class="panel calendar-panel">
+        <div class="calendar-head">
+          <span class="calendar-month" id="calendarMonth"></span>
+          <span class="calendar-nav">
+            <button id="calendarPrev" aria-label="이전 달">‹</button>
+            <button id="calendarNext" aria-label="다음 달">›</button>
+          </span>
+        </div>
+        <div class="weekdays" id="calendarWeekdays"></div>
+        <div class="days-grid" id="calendarDays"></div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#2C6BA8;"></span>병원방문</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#7E6BB0;"></span>처방전</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#C08A5E;"></span>증상</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#5B9E7E;"></span>접종·검진</span>
+        </div>
+
+        <div class="monthly-summary">
+          <div class="monthly-summary-head">
+            <span class="title">8월 누계</span>
+            <span class="link">연간 보기</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card"><span class="stat-label">병원 방문</span><span class="stat-value">3<span class="stat-unit">회</span></span></div>
+            <div class="stat-card"><span class="stat-label">처방 일수</span><span class="stat-value">12<span class="stat-unit">일</span></span></div>
+            <div class="stat-card"><span class="stat-label">증상 기록</span><span class="stat-value">9<span class="stat-unit">일</span></span></div>
+            <div class="stat-card"><span class="stat-label">접종 · 검진</span><span class="stat-value">2<span class="stat-unit">건</span></span></div>
+          </div>
+        </div>
+
+        <div class="dept-breakdown">
+          <div class="dept-title">진료과별 · 올해</div>
+          <div class="dept-list">
+            <div class="dept-row"><span class="dept-name">내과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:70%; background:#2C6BA8;"></span></span><span class="dept-count">7</span></div>
+            <div class="dept-row"><span class="dept-name">치과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:40%; background:#3E8FA8;"></span></span><span class="dept-count">4</span></div>
+            <div class="dept-row"><span class="dept-name">안과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:20%; background:#7E6BB0;"></span></span><span class="dept-count">2</span></div>
+            <div class="dept-row"><span class="dept-name">정형외과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:10%; background:#C08A5E;"></span></span><span class="dept-count">1</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="view-panel" data-view="today">
+      <section class="record-column">
+        <div class="record-head">
+          <div class="record-date">
+            <span class="date" id="recordDate"></span>
+            <span class="meta">기록 4건 · 마지막 수정 14:52</span>
+          </div>
+          <div class="record-actions">
+            <button class="btn">+ 병원방문</button>
+            <button class="btn">+ 처방전</button>
+            <button class="btn btn-primary">저장</button>
+          </div>
+        </div>
+
+        <div class="record-body">
+
+          <div class="card" id="symptomCard"></div>
+
+          <div class="card card-accent-blue">
+            <div class="card-head">
+              <div class="card-head-left">
+                <span class="card-title">병원 방문</span>
+                <span class="badge badge-blue">내과</span>
+              </div>
+              <span class="card-link">수정</span>
+            </div>
+            <div class="visit-grid">
+              <div class="field"><span class="field-label">날짜 · 시간</span><span class="field-box">2026.08.08 09:40</span></div>
+              <div class="field"><span class="field-label">병원</span><span class="field-box">서울연세내과의원</span></div>
+              <div class="field"><span class="field-label">진료과</span><span class="field-box">내과</span></div>
+              <div class="field"><span class="field-label">담당 의사</span><span class="field-box">박정우 원장</span></div>
+              <div class="field"><span class="field-label">다음 예약</span><span class="field-box accent">2026.08.13 09:30</span></div>
+              <div class="field"><span class="field-label">처치 · 수액</span><span class="field-box">수액 1팩 (영양수액)</span></div>
+            </div>
+            <div class="memo-row">
+              <span class="memo-label">진단 메모</span>
+              <span class="memo-box">급성 인두염 소견. 신속항원 음성, CRP 정상 범위. 3일 내 열 지속되면 재방문 권유.</span>
+            </div>
+          </div>
+
+          <div class="card card-accent-purple rx-card">
+            <div class="card-head">
+              <div class="card-head-left">
+                <span class="card-title">처방전</span>
+                <span class="card-subtitle">5일분 · 2026.08.08 – 08.12</span>
+              </div>
+              <span class="card-link">약 설명 보기</span>
+            </div>
+            <div class="rx-table">
+              <div class="rx-row head"><span>약 이름</span><span>용량</span><span>복용</span><span>비고</span></div>
+              <div class="rx-row"><span>세파클러 캡슐</span><span class="rx-dose">250mg</span><span class="rx-freq">1일 3회</span><span class="rx-note">식후 30분</span></div>
+              <div class="rx-row"><span>아세트아미노펜</span><span class="rx-dose">500mg</span><span class="rx-freq">필요 시</span><span class="rx-note">1일 최대 4정</span></div>
+              <div class="rx-row last"><span>레바미피드</span><span class="rx-dose">100mg</span><span class="rx-freq">1일 3회</span><span class="rx-note">위 보호</span></div>
+            </div>
+            <div class="warning-box">
+              <span class="warning-dot"></span>
+              <span class="warning-text">중복 확인 — 복용 중인 <strong>타이레놀</strong>과 아세트아미노펜 성분이 겹칩니다. 함께 복용하지 마세요.</span>
+              <span class="warning-confirm">확인</span>
+            </div>
+            <div class="rx-memo-row">
+              <span class="memo-label">주의 메모</span>
+              <span class="memo-box">유제품·제산제와 2시간 간격 두기. 공복 복용 금지. 복용 중 음주 금지.</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="side-panel">
+        <div class="card card-accent-green">
+          <div class="card-head"><span class="card-title" style="font-size:15px;">접종 · 검진</span><span class="card-link">추가</span></div>
+          <div class="vaccine-list">
+            <div class="vaccine-item"><span class="badge badge-green">필수</span><span class="vaccine-name">인플루엔자 4가</span><span class="vaccine-date">2025.10</span></div>
+            <div class="vaccine-item"><span class="badge badge-green">필수</span><span class="vaccine-name">코로나19 추가접종</span><span class="vaccine-date">2025.11</span></div>
+            <div class="vaccine-item"><span class="badge badge-neutral">증상별</span><span class="vaccine-name">A형 간염 2차</span><span class="vaccine-date upcoming">예정 09.02</span></div>
+            <div class="vaccine-divider"></div>
+            <div class="vaccine-item"><span class="badge badge-blue">국가</span><span class="vaccine-name">일반 건강검진</span><span class="vaccine-date">2026.04</span></div>
+            <div class="vaccine-item"><span class="badge badge-neutral">개인</span><span class="vaccine-name">갑상선 초음파</span><span class="vaccine-date">2026.06</span></div>
+            <div class="result-memo">결과 메모 — 콜레스테롤 경계, 6개월 뒤 재검. 갑상선 결절 0.4cm 경과관찰.</div>
+          </div>
+        </div>
+
+        <div class="card photo-panel">
+          <div class="photo-head"><span class="card-title" style="font-size:15px;">병원기록지 사진</span><span class="photo-count">2장</span></div>
+          <div class="photo-grid">
+            <div class="photo-placeholder"><span>처방전 사진</span></div>
+            <div class="photo-placeholder"><span>검사결과지</span></div>
+          </div>
+          <div class="upload-dropzone">사진 끌어다 놓기 · 촬영</div>
+          <div class="link-list">
+            <a class="link-item" href="https://www.nhis.or.kr" target="_blank" rel="noopener">건강검진 기록 조회<span class="arrow">↗</span></a>
+            <div class="link-divider"></div>
+            <a class="link-item" href="https://nedrug.mfds.go.kr" target="_blank" rel="noopener">의약품 안전정보<span class="arrow">↗</span></a>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <div class="view-panel" data-view="visit">
+        <div class="visit-view-head">
+          <div class="visit-view-title">
+            <span class="card-title">병원 방문</span>
+            <span class="visit-count" id="visitCount"></span>
+          </div>
+          <div class="visit-view-actions">
+            <span class="filter-chip" id="visitFilterChip">
+              <span id="visitFilterLabel"></span>
+              <button id="visitFilterClear" type="button" aria-label="필터 해제">✕</button>
+            </span>
+            <button class="btn btn-primary" id="addVisitBtn" type="button">+ 병원방문</button>
+          </div>
+        </div>
+        <div class="visit-list" id="visitList"></div>
+      </div>
+
+      <div class="view-panel" data-view="placeholder">
+        <div class="empty-state">
+          <p id="placeholderText"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabaseConfig.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/symptoms.js"></script>
+<script src="js/visits.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
