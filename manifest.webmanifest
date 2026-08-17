@@ -1,0 +1,17 @@
+{
+  "name": "건강비서",
+  "short_name": "건강비서",
+  "description": "가족 건강일기와 생활 바이오리듬을 기록하는 앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBFCFD",
+  "theme_color": "#2C6BA8",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
