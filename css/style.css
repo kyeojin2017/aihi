@@ -737,18 +737,19 @@ body[data-page="life"] .dept-breakdown { display: none; }
   background: linear-gradient(180deg, var(--tone-tint) 0%, #fff 58%);
 }
 
+/* 아이콘은 항목 색을 꽉 채워 멀리서도 구분되게 한다 */
 .metric-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: var(--white);
-  color: var(--tone);
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--tone);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(20, 24, 28, 0.06);
+  box-shadow: 0 4px 10px -3px var(--tone);
 }
-.metric-icon svg { width: 21px; height: 21px; }
+.metric-icon svg { width: 26px; height: 26px; stroke-width: 2.1; }
 
 .metric-label { font-size: 13.5px; font-weight: 600; color: var(--text-soft); }
 
@@ -797,17 +798,18 @@ body[data-page="life"] .dept-breakdown { display: none; }
 /* 섹션 헤더 */
 .section-head { display: flex; align-items: center; gap: 10px; }
 .section-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--tone-tint);
-  color: var(--tone);
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--tone);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  box-shadow: 0 3px 8px -3px var(--tone);
 }
-.section-icon svg { width: 17px; height: 17px; }
+.section-icon svg { width: 20px; height: 20px; stroke-width: 2.1; }
 .section-title { font-size: 15.5px; font-weight: 600; }
 .section-count { font-size: 12.5px; color: var(--muted); }
 
@@ -839,9 +841,20 @@ body[data-page="life"] .dept-breakdown { display: none; }
   font-family: inherit;
   cursor: pointer;
 }
-.flag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.flag-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.flag-icon svg { width: 16px; height: 16px; stroke-width: 2.1; }
 .flag.on { background: var(--tone-tint); border-color: var(--tone); color: var(--tone); font-weight: 600; }
-.flag.on .flag-dot { background: var(--tone); }
+.flag.on .flag-icon { background: var(--tone); color: #fff; }
 
 .life-memo {
   width: 100%;

@@ -10,7 +10,10 @@ const LifeLogs = (() => {
     exercise: `<path d="M5 9v6M8 7.5v9M16 7.5v9M19 9v6M8 12h8"/>`,
     caffeine: `<path d="M5 8h11v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5V8ZM16 9.5h1.5a2.25 2.25 0 0 1 0 4.5H16M6 20h11"/>`,
     meal: `<path d="M6 3.5v7M9 3.5v7M7.5 10.5V20M15 3.5c-1.2 1.6-1.5 3.4-1.5 5.2 0 1.5.7 2.3 2 2.3h1.5V20"/>`,
-    trend: `<path d="M4 16.5 9 11l3.5 3.5L20 7"/><path d="M15.5 7H20v4.5"/>`
+    trend: `<path d="M4 16.5 9 11l3.5 3.5L20 7"/><path d="M15.5 7H20v4.5"/>`,
+    alcohol: `<path d="M7 4h10l-1 5a4 4 0 0 1-8 0Z"/><path d="M12 13v6M9 19h6"/>`,
+    period: `<path d="M12 3.5c3 3.6 5.5 6.6 5.5 9.4a5.5 5.5 0 0 1-11 0c0-2.8 2.5-5.8 5.5-9.4Z"/><path d="M12 16.5v.01"/>`,
+    status: `<path d="M12 4.5 13.9 9l4.6.4-3.5 3.1 1 4.5-4-2.4-4 2.4 1-4.5L5.5 9.4 10.1 9Z"/>`
   };
 
   function icon(name) {
@@ -207,14 +210,15 @@ const LifeLogs = (() => {
 
       <div class="card life-card">
         <div class="section-head">
+          <span class="section-icon tone-caffeine">${icon("status")}</span>
           <span class="section-title">오늘의 상태</span>
         </div>
         <div class="flag-row">
           <button type="button" class="flag tone-alcohol${rec.alcohol ? " on" : ""}" data-action="toggleAlcohol">
-            <span class="flag-dot"></span>음주
+            <span class="flag-icon">${icon("alcohol")}</span>음주
           </button>
           <button type="button" class="flag tone-period${rec.isPeriodDay ? " on" : ""}" data-action="togglePeriod">
-            <span class="flag-dot"></span>월경
+            <span class="flag-icon">${icon("period")}</span>월경
           </button>
         </div>
         <textarea class="life-memo" data-field="memo"
