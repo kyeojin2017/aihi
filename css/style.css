@@ -626,6 +626,7 @@ a:hover { color: var(--primary-dark); }
 /* ---- View switching (today / visit / placeholder) ---- */
 .view-panel[data-view="today"] { display: contents; }
 .view-panel[data-view="visit"],
+.view-panel[data-view="life"],
 .view-panel[data-view="placeholder"] {
   display: none;
   grid-column: 2 / 4;
@@ -703,3 +704,56 @@ input.field-box:focus, select.field-box:focus, textarea.memo-box:focus {
 textarea.memo-box { resize: vertical; min-height: 56px; }
 
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ---- Life logs (생활 바이오리듬) ---- */
+.life-autosave { font-size: 12.5px; color: var(--muted); }
+.life-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
+.life-card { display: flex; flex-direction: column; gap: 14px; }
+.life-hint { font-size: 13.5px; color: var(--muted); }
+
+.life-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+
+.meal-list { display: flex; flex-direction: column; gap: 8px; }
+.meal-row { display: flex; align-items: center; gap: 8px; }
+.meal-row .meal-time { width: 148px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.meal-remove {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.meal-remove:hover { color: var(--red); border-color: var(--red); }
+
+.water-row { display: flex; align-items: center; gap: 8px; }
+.water-row .water-input { width: 132px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.water-total { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary-dark); }
+.water-hint { font-size: 12.5px; color: var(--muted); }
+
+.life-flags { display: flex; gap: 8px; }
+
+.life-trend { display: flex; flex-direction: column; gap: 10px; }
+.life-trend-empty { font-size: 13.5px; color: var(--muted); }
+.life-trend-bars { display: flex; align-items: flex-end; gap: 10px; height: 108px; }
+.life-trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+.life-trend-value { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; height: 14px; }
+.life-trend-track {
+  flex: 1;
+  width: 100%;
+  max-width: 34px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--panel-bg);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.life-trend-fill { width: 100%; background: var(--primary); border-radius: 5px; min-height: 3px; }
+.life-trend-fill.none { background: transparent; min-height: 0; }
+.life-trend-col.selected .life-trend-fill { background: var(--primary-dark); }
+.life-trend-col.selected .life-trend-value { color: var(--primary-dark); font-weight: 600; }
+.life-trend-day { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.life-trend-note { font-size: 13px; color: var(--gray-soft); }

@@ -10,6 +10,7 @@ window.AppState = {
 };
 
 let currentView = "today";
+let currentPage = "diary";
 const calendarState = { year: REAL_TODAY.getFullYear(), month: REAL_TODAY.getMonth() };
 
 function pad2(n) { return String(n).padStart(2, "0"); }
@@ -97,10 +98,31 @@ function setView(view) {
   }
 }
 
+function setPage(page) {
+  currentPage = page;
+
+  document.querySelector(".subtabs").style.display = page === "diary" ? "" : "none";
+  document.querySelector(".page-name").textContent = page === "life" ? "생활 바이오리듬" : "건강일기";
+
+  if (page === "diary") {
+    setView(currentView);
+    return;
+  }
+
+  document.querySelectorAll(".view-panel").forEach(panel => {
+    panel.style.display = panel.dataset.view === page ? "flex" : "none";
+  });
+  if (page === "life") LifeLogs.render();
+}
+
 window.refreshAll = function refreshAll() {
   renderCalendar();
   renderRecordDate();
   Symptoms.render();
+  if (currentPage === "life") {
+    LifeLogs.render();
+    return;
+  }
   if (currentView === "visit") Visits.render();
 };
 
@@ -136,6 +158,16 @@ function bindSubtabs() {
   });
 }
 
+function bindNav() {
+  document.querySelectorAll(".nav-item[data-page]").forEach(item => {
+    item.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+      item.classList.add("active");
+      setPage(item.dataset.page);
+    });
+  });
+}
+
 function bindFamilySwitch() {
   document.querySelectorAll(".family-item[data-member]").forEach(item => {
     item.addEventListener("click", () => {
@@ -164,9 +196,11 @@ renderCalendar();
 renderRecordDate();
 Symptoms.render();
 Visits.init();
+LifeLogs.init();
 setView("today");
 
 bindCalendarNav();
 bindSubtabs();
+bindNav();
 bindFamilySwitch();
 bindExclusiveToggle(".view-toggle");

@@ -20,8 +20,8 @@
     </div>
     <nav class="nav">
       <div class="nav-item"><span class="nav-dot"></span>개인정보</div>
-      <div class="nav-item active"><span class="nav-dot"></span>건강일기</div>
-      <div class="nav-item"><span class="nav-dot"></span>생활 바이오리듬</div>
+      <div class="nav-item active" data-page="diary"><span class="nav-dot"></span>건강일기</div>
+      <div class="nav-item" data-page="life"><span class="nav-dot"></span>생활 바이오리듬</div>
     </nav>
     <div class="family">
       <div class="family-label">가족 구성원</div>
@@ -228,6 +228,17 @@
         <div class="visit-list" id="visitList"></div>
       </div>
 
+      <div class="view-panel" data-view="life" id="lifePanel">
+        <div class="visit-view-head">
+          <div class="visit-view-title">
+            <span class="card-title">생활 바이오리듬</span>
+            <span class="visit-count" id="lifeDate"></span>
+          </div>
+          <span class="life-autosave">입력하면 자동 저장됩니다</span>
+        </div>
+        <div class="life-body" id="lifeBody"></div>
+      </div>
+
       <div class="view-panel" data-view="placeholder">
         <div class="empty-state">
           <p id="placeholderText"></p>
@@ -244,6 +255,7 @@
 <script src="js/storage.js"></script>
 <script src="js/symptoms.js"></script>
 <script src="js/visits.js"></script>
+<script src="js/lifelogs.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
