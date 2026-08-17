@@ -100,6 +100,7 @@ function setView(view) {
 
 function setPage(page) {
   currentPage = page;
+  document.body.dataset.page = page;
 
   document.querySelector(".subtabs").style.display = page === "diary" ? "" : "none";
   document.querySelector(".page-name").textContent = page === "life" ? "생활 바이오리듬" : "건강일기";
