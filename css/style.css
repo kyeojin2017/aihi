@@ -1056,10 +1056,16 @@ body[data-page="life"] .dept-breakdown { display: none; }
   .meal-row input[data-field="mealMemo"] { flex: 1 1 100%; order: 3; }
   .meal-remove { margin-left: auto; background: transparent; }
 
-  /* 화면 제목 줄이 좁은 폭에서 찌그러지지 않게 세로로 쌓는다 */
+  /* 상단 바에 이미 화면 이름이 있으므로 본문 제목은 날짜만 남긴다 */
   .visit-view-head { flex-direction: column; align-items: flex-start; gap: 6px; }
   .visit-view-actions { width: 100%; }
   .life-autosave { font-size: 12px; }
+  body[data-page="life"] .visit-view-title .card-title { display: none; }
+  body[data-page="life"] .visit-count { font-size: 19px; font-weight: 600; color: var(--text); }
+
+  /* 처방전 표는 칸이 좁으면 글자가 뭉개지므로 표 안에서만 옆으로 넘긴다 */
+  .rx-table { overflow-x: auto; }
+  .rx-row { min-width: 430px; }
 
   .metric-grid { gap: 10px; }
   .metric { padding: 14px; }

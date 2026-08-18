@@ -1,6 +1,6 @@
 // 오프라인에서도 앱이 열리도록 앱 셸을 캐시한다.
 // 파일을 고칠 때마다 CACHE 버전을 올리면 기기에서 새 버전을 받아간다.
-const CACHE = "healthyai-v1";
+const CACHE = "healthyai-v2";
 
 const ASSETS = [
   "./",
@@ -59,19 +59,17 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  // 정적 파일은 캐시 우선 + 뒤에서 갱신
+  // 정적 파일도 네트워크 우선 — 캐시 우선으로 두면 새로 배포한 CSS/JS가
+  // 기기에 계속 옛 버전으로 남는다. 네트워크가 안 되면 캐시로 넘어간다.
   event.respondWith(
-    caches.match(req).then(hit => {
-      const network = fetch(req)
-        .then(res => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then(c => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => hit);
-      return hit || network;
-    })
+    fetch(req)
+      .then(res => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });
