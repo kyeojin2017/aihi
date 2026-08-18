@@ -1056,6 +1056,11 @@ body[data-page="life"] .dept-breakdown { display: none; }
   .meal-row input[data-field="mealMemo"] { flex: 1 1 100%; order: 3; }
   .meal-remove { margin-left: auto; background: transparent; }
 
+  /* 화면 제목 줄이 좁은 폭에서 찌그러지지 않게 세로로 쌓는다 */
+  .visit-view-head { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .visit-view-actions { width: 100%; }
+  .life-autosave { font-size: 12px; }
+
   .metric-grid { gap: 10px; }
   .metric { padding: 14px; }
   .metric-value input { font-size: 26px; }
@@ -1075,4 +1080,5 @@ body[data-page="life"] .dept-breakdown { display: none; }
 @media (max-width: 480px) {
   .visit-grid, .life-grid { grid-template-columns: minmax(0, 1fr); }
   .topbar-sep, .topbar-title .patient-name { display: none; }
+  .life-autosave { display: none; }
 }
