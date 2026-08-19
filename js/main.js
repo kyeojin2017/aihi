@@ -156,8 +156,11 @@ function renderRecordDate() {
 
 function setView(view) {
   currentView = view;
-  document.querySelectorAll(".view-panel").forEach(panel => {
-    if (panel.dataset.view === view) {
+  const panels = document.querySelectorAll(".view-panel");
+  const hasDedicatedPanel = Array.from(panels).some(p => p.dataset.view === view);
+  panels.forEach(panel => {
+    const isPlaceholderFallback = panel.dataset.view === "placeholder" && !hasDedicatedPanel;
+    if (panel.dataset.view === view || isPlaceholderFallback) {
       panel.style.display = view === "today" ? "contents" : "flex";
     } else {
       panel.style.display = "none";
@@ -170,8 +173,6 @@ function setView(view) {
     Prescriptions.render();
   } else if (view === "checkup") {
     Checkups.render();
-  } else if (view === "photo") {
-    Photos.render();
   } else if (view === "report") {
     Report.render();
   } else if (view !== "today") {
@@ -187,7 +188,6 @@ window.refreshAll = function refreshAll() {
   if (currentView === "visit") Visits.render();
   if (currentView === "rx") Prescriptions.render();
   if (currentView === "checkup") Checkups.render();
-  if (currentView === "photo") Photos.render();
   if (currentView === "report") Report.render();
   if (currentSection === "profile") Profile.render();
   refreshFamilyIdentity();
@@ -224,6 +224,62 @@ function bindCalendarNav() {
     AppState.selectedDate = new Date(y, m - 1, d);
     if (currentView === "visit") AppState.visitFilterDate = dateKey;
     window.refreshAll();
+  });
+}
+
+const MONTH_LABELS = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+let pickerYear = calendarState.year;
+
+function renderMonthPicker() {
+  document.getElementById("pickerYearLabel").textContent = `${pickerYear}년`;
+  const grid = document.getElementById("pickerMonthGrid");
+  grid.innerHTML = MONTH_LABELS.map((label, i) => {
+    const isCurrentMonth = pickerYear === REAL_TODAY.getFullYear() && i === REAL_TODAY.getMonth();
+    const isSelected = pickerYear === calendarState.year && i === calendarState.month;
+    const classes = ["", isSelected ? "selected" : (isCurrentMonth ? "current" : "")].join(" ").trim();
+    return `<button type="button" class="${classes}" data-month="${i}">${label}</button>`;
+  }).join("");
+}
+
+function openMonthPicker() {
+  pickerYear = calendarState.year;
+  renderMonthPicker();
+  document.getElementById("monthPicker").classList.add("open");
+}
+
+function closeMonthPicker() {
+  document.getElementById("monthPicker").classList.remove("open");
+}
+
+function bindMonthPicker() {
+  document.getElementById("calendarMonthBtn").addEventListener("click", e => {
+    e.stopPropagation();
+    const popover = document.getElementById("monthPicker");
+    if (popover.classList.contains("open")) closeMonthPicker();
+    else openMonthPicker();
+  });
+
+  document.getElementById("pickerYearPrev").addEventListener("click", () => {
+    pickerYear -= 1;
+    renderMonthPicker();
+  });
+  document.getElementById("pickerYearNext").addEventListener("click", () => {
+    pickerYear += 1;
+    renderMonthPicker();
+  });
+
+  document.getElementById("pickerMonthGrid").addEventListener("click", e => {
+    const btn = e.target.closest("button[data-month]");
+    if (!btn) return;
+    calendarState.year = pickerYear;
+    calendarState.month = Number(btn.dataset.month);
+    closeMonthPicker();
+    renderCalendar();
+  });
+
+  document.addEventListener("click", e => {
+    const picker = document.getElementById("calendarMonthBtn").parentElement;
+    if (!picker.contains(e.target)) closeMonthPicker();
   });
 }
 
@@ -310,11 +366,11 @@ Visits.init();
 Profile.init();
 Prescriptions.init();
 Checkups.init();
-Photos.init();
 Report.init();
 setView("today");
 
 bindCalendarNav();
+bindMonthPicker();
 bindSubtabs();
 bindFamilySwitch();
 bindTopNav();

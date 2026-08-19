@@ -148,33 +148,6 @@ const Storage = (() => {
   const supplementsStore = makeList("supplements");
   const prescriptionsStore = makeList("prescriptions");
   const checkupsStore = makeList("checkups");
-  const photosStore = makeList("photos");
-
-  const PHOTO_BUCKET = "medical-photos";
-
-  async function uploadPhoto(memberId, file) {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error("로그인이 필요합니다.");
-    const path = `${user.id}/${memberId}/${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabaseClient.storage.from(PHOTO_BUCKET).upload(path, file);
-    if (uploadError) throw uploadError;
-    const { data: signed, error: signError } = await supabaseClient.storage
-      .from(PHOTO_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 7);
-    if (signError) throw signError;
-    return { path, url: signed.signedUrl };
-  }
-
-  async function getPhotoUrl(path) {
-    const { data, error } = await supabaseClient.storage
-      .from(PHOTO_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 7);
-    if (error) throw error;
-    return data.signedUrl;
-  }
-
-  async function deletePhotoFile(path) {
-    const { error } = await supabaseClient.storage.from(PHOTO_BUCKET).remove([path]);
-    if (error) throw error;
-  }
 
   function seedIfEmpty() {
     if (getVisits().length === 0) {
@@ -273,11 +246,6 @@ const Storage = (() => {
     addCheckup: checkupsStore.add,
     updateCheckup: checkupsStore.update,
     deleteCheckup: checkupsStore.remove,
-    getPhotoMetas: photosStore.getAll,
-    addPhotoMeta: photosStore.add,
-    updatePhotoMeta: photosStore.update,
-    deletePhotoMeta: photosStore.remove,
-    uploadPhoto, getPhotoUrl, deletePhotoFile,
     seedIfEmpty
   };
 })();

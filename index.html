@@ -70,7 +70,20 @@
 
       <section class="panel calendar-panel">
         <div class="calendar-head">
-          <span class="calendar-month" id="calendarMonth"></span>
+          <div class="calendar-month-picker">
+            <button type="button" class="calendar-month-trigger" id="calendarMonthBtn">
+              <span class="calendar-month" id="calendarMonth"></span>
+              <span class="picker-caret">▾</span>
+            </button>
+            <div class="month-picker-popover" id="monthPicker">
+              <div class="month-picker-year">
+                <button type="button" id="pickerYearPrev" aria-label="이전 연도">‹</button>
+                <span id="pickerYearLabel"></span>
+                <button type="button" id="pickerYearNext" aria-label="다음 연도">›</button>
+              </div>
+              <div class="month-picker-grid" id="pickerMonthGrid"></div>
+            </div>
+          </div>
           <span class="calendar-nav">
             <button id="calendarPrev" aria-label="이전 달">‹</button>
             <button id="calendarNext" aria-label="다음 달">›</button>
@@ -245,24 +258,6 @@
         <div class="visit-list" id="checkupList"></div>
       </div>
 
-      <div class="view-panel" data-view="photo">
-        <div class="visit-view-head">
-          <div class="visit-view-title">
-            <span class="card-title">사진 기록</span>
-            <span class="visit-count" id="photoCount"></span>
-          </div>
-        </div>
-        <div class="photo-upload-block">
-          <div class="photo-upload-row">
-            <input type="file" id="photoFileInput" accept="image/*">
-            <input type="text" id="photoCaptionInput" placeholder="캡션 (예: 처방전 사진)">
-            <button class="btn btn-primary" id="photoUploadBtn" type="button">업로드</button>
-          </div>
-          <span class="photo-upload-status" id="photoUploadStatus"></span>
-        </div>
-        <div class="photo-tab-grid" id="photoTabGrid"></div>
-      </div>
-
       <div class="view-panel" data-view="report">
         <div class="visit-view-head">
           <div class="visit-view-title"><span class="card-title">통계 · 리포트</span></div>
@@ -314,7 +309,6 @@
 <script src="js/profile.js"></script>
 <script src="js/prescriptions.js"></script>
 <script src="js/checkups.js"></script>
-<script src="js/photos.js"></script>
 <script src="js/report.js"></script>
 <script src="js/main.js"></script>
 </body>
