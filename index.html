@@ -92,25 +92,20 @@
 
         <div class="monthly-summary">
           <div class="monthly-summary-head">
-            <span class="title">8월 누계</span>
-            <span class="link">연간 보기</span>
+            <span class="title" id="monthlySummaryTitle">누계</span>
+            <span class="link" data-tab-link="report">리포트 보기</span>
           </div>
           <div class="stats-grid">
-            <div class="stat-card"><span class="stat-label">병원 방문</span><span class="stat-value">3<span class="stat-unit">회</span></span></div>
-            <div class="stat-card"><span class="stat-label">처방 일수</span><span class="stat-value">12<span class="stat-unit">일</span></span></div>
-            <div class="stat-card"><span class="stat-label">증상 기록</span><span class="stat-value">9<span class="stat-unit">일</span></span></div>
-            <div class="stat-card"><span class="stat-label">접종 · 검진</span><span class="stat-value">2<span class="stat-unit">건</span></span></div>
+            <div class="stat-card"><span class="stat-label">병원 방문</span><span class="stat-value" id="calStatVisit"><span class="stat-unit">회</span></span></div>
+            <div class="stat-card"><span class="stat-label">처방 일수</span><span class="stat-value" id="calStatRx"><span class="stat-unit">일</span></span></div>
+            <div class="stat-card"><span class="stat-label">증상 기록</span><span class="stat-value" id="calStatSymptom"><span class="stat-unit">일</span></span></div>
+            <div class="stat-card"><span class="stat-label">접종 · 검진</span><span class="stat-value" id="calStatCheckup"><span class="stat-unit">건</span></span></div>
           </div>
         </div>
 
         <div class="dept-breakdown">
-          <div class="dept-title">진료과별 · 올해</div>
-          <div class="dept-list">
-            <div class="dept-row"><span class="dept-name">내과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:70%; background:#2C6BA8;"></span></span><span class="dept-count">7</span></div>
-            <div class="dept-row"><span class="dept-name">치과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:40%; background:#3E8FA8;"></span></span><span class="dept-count">4</span></div>
-            <div class="dept-row"><span class="dept-name">안과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:20%; background:#7E6BB0;"></span></span><span class="dept-count">2</span></div>
-            <div class="dept-row"><span class="dept-name">정형외과</span><span class="dept-bar"><span class="dept-bar-fill" style="width:10%; background:#C08A5E;"></span></span><span class="dept-count">1</span></div>
-          </div>
+          <div class="dept-title" id="calendarDeptTitle">진료과별 · 올해</div>
+          <div class="dept-list" id="calendarDeptList"></div>
         </div>
       </section>
 
@@ -229,6 +224,61 @@
         <div class="visit-list" id="visitList"></div>
       </div>
 
+      <div class="view-panel" data-view="rx">
+        <div class="visit-view-head">
+          <div class="visit-view-title">
+            <span class="card-title">처방전</span>
+            <span class="visit-count" id="rxCount"></span>
+          </div>
+          <div class="visit-view-actions">
+            <button class="btn btn-primary" id="addRxBtn" type="button">+ 처방전</button>
+          </div>
+        </div>
+        <div class="visit-list" id="rxList"></div>
+      </div>
+
+      <div class="view-panel" data-view="checkup">
+        <div class="visit-view-head">
+          <div class="visit-view-title">
+            <span class="card-title">접종 · 검진</span>
+            <span class="visit-count" id="checkupCount"></span>
+          </div>
+          <div class="visit-view-actions">
+            <button class="btn btn-primary" id="addCheckupBtn" type="button">+ 접종·검진</button>
+          </div>
+        </div>
+        <div class="visit-list" id="checkupList"></div>
+      </div>
+
+      <div class="view-panel" data-view="photo">
+        <div class="visit-view-head">
+          <div class="visit-view-title">
+            <span class="card-title">사진 기록</span>
+            <span class="visit-count" id="photoCount"></span>
+          </div>
+        </div>
+        <div class="photo-upload-block">
+          <div class="photo-upload-row">
+            <input type="file" id="photoFileInput" accept="image/*">
+            <input type="text" id="photoCaptionInput" placeholder="캡션 (예: 처방전 사진)">
+            <button class="btn btn-primary" id="photoUploadBtn" type="button">업로드</button>
+          </div>
+          <span class="photo-upload-status" id="photoUploadStatus"></span>
+        </div>
+        <div class="photo-tab-grid" id="photoTabGrid"></div>
+      </div>
+
+      <div class="view-panel" data-view="report">
+        <div class="visit-view-head">
+          <div class="visit-view-title"><span class="card-title">통계 · 리포트</span></div>
+          <div class="period-toggle" id="reportPeriodToggle">
+            <button class="active" data-period="month" type="button">이번 달</button>
+            <button data-period="year" type="button">올해</button>
+          </div>
+        </div>
+        <div class="report-body" id="reportBody"></div>
+      </div>
+
       <div class="view-panel" data-view="placeholder">
         <div class="empty-state">
           <p id="placeholderText"></p>
@@ -267,6 +317,10 @@
 <script src="js/symptoms.js"></script>
 <script src="js/visits.js"></script>
 <script src="js/profile.js"></script>
+<script src="js/prescriptions.js"></script>
+<script src="js/checkups.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/report.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

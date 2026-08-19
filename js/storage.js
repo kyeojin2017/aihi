@@ -135,6 +135,35 @@ const Storage = (() => {
   const conditionsStore = makeList("conditions");
   const medicationsStore = makeList("medications");
   const supplementsStore = makeList("supplements");
+  const prescriptionsStore = makeList("prescriptions");
+  const checkupsStore = makeList("checkups");
+  const photosStore = makeList("photos");
+
+  const PHOTO_BUCKET = "medical-photos";
+
+  async function uploadPhoto(memberId, file) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("로그인이 필요합니다.");
+    const path = `${user.id}/${memberId}/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabaseClient.storage.from(PHOTO_BUCKET).upload(path, file);
+    if (uploadError) throw uploadError;
+    const { data: signed, error: signError } = await supabaseClient.storage
+      .from(PHOTO_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (signError) throw signError;
+    return { path, url: signed.signedUrl };
+  }
+
+  async function getPhotoUrl(path) {
+    const { data, error } = await supabaseClient.storage
+      .from(PHOTO_BUCKET).createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (error) throw error;
+    return data.signedUrl;
+  }
+
+  async function deletePhotoFile(path) {
+    const { error } = await supabaseClient.storage.from(PHOTO_BUCKET).remove([path]);
+    if (error) throw error;
+  }
 
   function seedIfEmpty() {
     if (getVisits().length === 0) {
@@ -176,6 +205,26 @@ const Storage = (() => {
     if (supplementsStore.getAll("self").length === 0) {
       supplementsStore.add("self", { name: "비타민D", dosage: "1000IU", frequency: "1일 1회", memo: "아침 식후" });
     }
+    if (prescriptionsStore.getAll("self").length === 0) {
+      const visit = getVisits().find(v => v.memberId === "self");
+      prescriptionsStore.add("self", {
+        visitId: visit ? visit.id : null,
+        startDate: "2026-08-08",
+        endDate: "2026-08-12",
+        cautionMemo: "유제품·제산제와 2시간 간격 두기. 공복 복용 금지. 복용 중 음주 금지.",
+        items: [
+          { drugName: "세파클러 캡슐", dose: "250mg", frequency: "1일 3회", note: "식후 30분" },
+          { drugName: "아세트아미노펜", dose: "500mg", frequency: "필요 시", note: "1일 최대 4정" },
+          { drugName: "레바미피드", dose: "100mg", frequency: "1일 3회", note: "위 보호" }
+        ]
+      });
+    }
+    if (checkupsStore.getAll("self").length === 0) {
+      checkupsStore.add("self", { type: "vaccine", category: "필수", name: "인플루엔자 4가", date: "2025-10-15", status: "완료", resultMemo: "" });
+      checkupsStore.add("self", { type: "vaccine", category: "필수", name: "코로나19 추가접종", date: "2025-11-20", status: "완료", resultMemo: "" });
+      checkupsStore.add("self", { type: "screening", category: "국가", name: "일반 건강검진", date: "2026-04-10", status: "완료", resultMemo: "콜레스테롤 경계, 6개월 뒤 재검." });
+      checkupsStore.add("self", { type: "screening", category: "개인", name: "갑상선 초음파", date: "2026-06-02", status: "완료", resultMemo: "갑상선 결절 0.4cm 경과관찰." });
+    }
   }
 
   return {
@@ -195,6 +244,19 @@ const Storage = (() => {
     addSupplement: supplementsStore.add,
     updateSupplement: supplementsStore.update,
     deleteSupplement: supplementsStore.remove,
+    getPrescriptions: prescriptionsStore.getAll,
+    addPrescription: prescriptionsStore.add,
+    updatePrescription: prescriptionsStore.update,
+    deletePrescription: prescriptionsStore.remove,
+    getCheckups: checkupsStore.getAll,
+    addCheckup: checkupsStore.add,
+    updateCheckup: checkupsStore.update,
+    deleteCheckup: checkupsStore.remove,
+    getPhotoMetas: photosStore.getAll,
+    addPhotoMeta: photosStore.add,
+    updatePhotoMeta: photosStore.update,
+    deletePhotoMeta: photosStore.remove,
+    uploadPhoto, getPhotoUrl, deletePhotoFile,
     seedIfEmpty
   };
 })();

@@ -74,6 +74,31 @@ function renderCalendar() {
     cells.push(`<div class="${classes.join(" ")}" data-date="${dateKey}"><span class="day-num">${n}</span><span class="day-dots">${dots}</span></div>`);
   }
   document.getElementById("calendarDays").innerHTML = cells.join("");
+
+  renderSummaryPanel();
+}
+
+const DEPT_COLORS = ["#2C6BA8", "#3E8FA8", "#7E6BB0", "#C08A5E", "#5B9E7E"];
+
+function renderSummaryPanel() {
+  const { year, month } = calendarState;
+  const summary = Report.computeSummary(AppState.memberId, year, month);
+  const deptRows = Report.computeDeptBreakdown(AppState.memberId, year);
+
+  document.getElementById("monthlySummaryTitle").textContent = `${month + 1}월 누계`;
+  document.getElementById("calStatVisit").innerHTML = `${summary.visitCount}<span class="stat-unit">회</span>`;
+  document.getElementById("calStatRx").innerHTML = `${summary.prescriptionDays}<span class="stat-unit">일</span>`;
+  document.getElementById("calStatSymptom").innerHTML = `${summary.symptomDays}<span class="stat-unit">일</span>`;
+  document.getElementById("calStatCheckup").innerHTML = `${summary.checkupCount}<span class="stat-unit">건</span>`;
+
+  document.getElementById("calendarDeptTitle").textContent = `진료과별 · ${year}년`;
+  const deptList = document.getElementById("calendarDeptList");
+  deptList.innerHTML = deptRows.length ? deptRows.map((r, i) => `
+    <div class="dept-row">
+      <span class="dept-name">${Storage.escapeHtml(r.name)}</span>
+      <span class="dept-bar"><span class="dept-bar-fill" style="width:${r.pct}%; background:${DEPT_COLORS[i % DEPT_COLORS.length]};"></span></span>
+      <span class="dept-count">${r.count}</span>
+    </div>`).join("") : `<div class="symptom-hint">${year}년 병원 방문 기록이 없습니다.</div>`;
 }
 
 function renderRecordDate() {
@@ -93,6 +118,14 @@ function setView(view) {
 
   if (view === "visit") {
     Visits.render();
+  } else if (view === "rx") {
+    Prescriptions.render();
+  } else if (view === "checkup") {
+    Checkups.render();
+  } else if (view === "photo") {
+    Photos.render();
+  } else if (view === "report") {
+    Report.render();
   } else if (view !== "today") {
     const label = document.querySelector(`.subtab[data-tab="${view}"]`)?.textContent || "이 화면";
     document.getElementById("placeholderText").textContent = `${label} 화면은 준비 중입니다.`;
@@ -104,6 +137,10 @@ window.refreshAll = function refreshAll() {
   renderRecordDate();
   Symptoms.render();
   if (currentView === "visit") Visits.render();
+  if (currentView === "rx") Prescriptions.render();
+  if (currentView === "checkup") Checkups.render();
+  if (currentView === "photo") Photos.render();
+  if (currentView === "report") Report.render();
   if (currentSection === "profile") Profile.render();
 };
 
@@ -169,6 +206,16 @@ function bindTopNav() {
   });
 }
 
+function bindTabLinks() {
+  document.querySelectorAll("[data-tab-link]").forEach(link => {
+    link.addEventListener("click", () => {
+      const tab = link.dataset.tabLink;
+      document.querySelectorAll(".subtab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+      setView(tab);
+    });
+  });
+}
+
 function bindExclusiveToggle(selector) {
   document.querySelectorAll(selector).forEach(group => {
     group.addEventListener("click", e => {
@@ -186,10 +233,15 @@ renderRecordDate();
 Symptoms.render();
 Visits.init();
 Profile.init();
+Prescriptions.init();
+Checkups.init();
+Photos.init();
+Report.init();
 setView("today");
 
 bindCalendarNav();
 bindSubtabs();
 bindFamilySwitch();
 bindTopNav();
+bindTabLinks();
 bindExclusiveToggle(".view-toggle");

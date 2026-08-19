@@ -328,6 +328,20 @@ a:hover { color: var(--primary-dark); }
   box-shadow: 0 1px 2px rgba(20,24,28,0.06);
 }
 
+.period-toggle { display: flex; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 2px; flex: 0 0 auto; }
+.period-toggle button {
+  padding: 5px 12px; border-radius: 6px; font-size: 13px; color: #6E7A84;
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+}
+.period-toggle button.active { background: #fff; font-weight: 500; color: var(--text); box-shadow: 0 1px 2px rgba(20,24,28,0.06); }
+
+/* ---- Report tab ---- */
+.report-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 24px; }
+.report-summary { display: flex; flex-direction: column; gap: 12px; }
+.report-summary .stats-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.report-dept { margin-top: 0; }
+.report-dept .dept-name { width: auto; min-width: 90px; }
+
 .content-grid {
   flex: 1;
   min-height: 0;
@@ -547,7 +561,8 @@ a:hover { color: var(--primary-dark); }
 .memo-box { flex: 1; border: 1px solid var(--border); border-radius: 9px; padding: 11px 14px; font-size: 14px; line-height: 1.6; color: var(--text-soft); }
 
 /* prescription card */
-.rx-card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+.rx-card { display: flex; flex-direction: column; gap: 14px; }
+.record-body .rx-card { flex: 1 1 auto; min-height: 0; }
 .rx-table { display: flex; flex-direction: column; flex: 0 0 auto; }
 .rx-row {
   display: grid;
@@ -626,6 +641,10 @@ a:hover { color: var(--primary-dark); }
 /* ---- View switching (today / visit / placeholder) ---- */
 .view-panel[data-view="today"] { display: contents; }
 .view-panel[data-view="visit"],
+.view-panel[data-view="rx"],
+.view-panel[data-view="checkup"],
+.view-panel[data-view="photo"],
+.view-panel[data-view="report"],
 .view-panel[data-view="placeholder"] {
   display: none;
   grid-column: 2 / 4;
@@ -703,6 +722,36 @@ a:hover { color: var(--primary-dark); }
 .simple-item-meta { font-size: 12.5px; color: var(--gray-soft); font-variant-numeric: tabular-nums; }
 .simple-item-memo { font-size: 13px; color: var(--text-soft); line-height: 1.5; }
 .simple-item-form { gap: 12px; }
+
+/* ---- Photo tab ---- */
+.photo-upload-block { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
+.photo-upload-row { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; flex-wrap: wrap; }
+.photo-upload-row input[type="file"] { font-size: 13px; color: var(--gray-soft); }
+.photo-upload-row input[type="text"] {
+  flex: 1; min-width: 160px; border: 1px solid var(--border); border-radius: 9px;
+  padding: 9px 12px; font: inherit; color: var(--text); background: #fff;
+}
+.photo-upload-status { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.photo-upload-status.error { color: var(--red); }
+
+.photo-tab-grid {
+  flex: 1; min-height: 0; overflow: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;
+}
+.photo-tile {
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  background: #fff; display: flex; flex-direction: column;
+}
+.photo-tile-img {
+  aspect-ratio: 4/3; background: var(--panel-bg);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.photo-tile-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-tile-img.broken { font-size: 11px; color: var(--muted); text-align: center; padding: 10px; }
+.photo-tile-body { padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+.photo-tile-caption { flex: 1; min-width: 0; font-size: 13px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-tile-date { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.photo-tile-delete { flex: 0 0 auto; font-size: 12px; color: var(--red); cursor: pointer; }
 
 /* ---- Inline forms (visit add/edit) ---- */
 input.field-box, select.field-box, textarea.memo-box {

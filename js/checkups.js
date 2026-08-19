@@ -1,0 +1,151 @@
+const Checkups = (() => {
+  let formMode = null; // null | "add" | { edit: id }
+
+  function init() {
+    document.getElementById("addCheckupBtn").addEventListener("click", () => {
+      formMode = "add";
+      render();
+    });
+    document.getElementById("checkupList").addEventListener("click", onListClick);
+  }
+
+  function refresh() {
+    if (typeof window.refreshAll === "function") window.refreshAll();
+    else render();
+  }
+
+  function findCheckup(id) {
+    return Storage.getCheckups(AppState.memberId).find(c => c.id === id) || null;
+  }
+
+  function formatDateFull(dateKey) {
+    if (!dateKey) return "-";
+    const [y, m, d] = dateKey.split("-").map(Number);
+    return `${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`;
+  }
+
+  function typeLabel(type) {
+    return type === "screening" ? "건강검진" : "예방접종";
+  }
+
+  function render() {
+    const listEl = document.getElementById("checkupList");
+    if (!listEl) return;
+
+    const all = Storage.getCheckups(AppState.memberId)
+      .slice()
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+    document.getElementById("checkupCount").textContent = `${all.length}건`;
+
+    const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findCheckup(formMode.edit) : null) : "";
+    const itemsHtml = all
+      .filter(c => !(formMode && typeof formMode === "object" && formMode.edit === c.id))
+      .map(renderCard)
+      .join("");
+
+    if (!formHtml && all.length === 0) {
+      listEl.innerHTML = `<div class="empty-state"><p>아직 접종·검진 기록이 없습니다.</p></div>`;
+    } else {
+      listEl.innerHTML = formHtml + itemsHtml;
+    }
+  }
+
+  function renderCard(c) {
+    const badgeClass = c.type === "screening" ? "badge-blue" : "badge-green";
+    return `
+      <div class="card ${c.type === "screening" ? "card-accent-blue" : "card-accent-green"}">
+        <div class="card-head">
+          <div class="card-head-left">
+            <span class="badge ${badgeClass}">${Storage.escapeHtml(c.category || typeLabel(c.type))}</span>
+            <span class="card-title">${Storage.escapeHtml(c.name || "")}</span>
+            <span class="card-subtitle">${typeLabel(c.type)}</span>
+          </div>
+          <span style="display:flex; gap:10px;">
+            <span class="card-link" data-action="edit" data-id="${c.id}">수정</span>
+            <span class="card-link danger" data-action="delete" data-id="${c.id}">삭제</span>
+          </span>
+        </div>
+        <div class="visit-grid">
+          <div class="field"><span class="field-label">날짜</span><span class="field-box">${formatDateFull(c.date)}</span></div>
+          <div class="field"><span class="field-label">구분</span><span class="field-box">${Storage.escapeHtml(c.category || "-")}</span></div>
+          <div class="field"><span class="field-label">상태</span><span class="field-box">${Storage.escapeHtml(c.status || "-")}</span></div>
+        </div>
+        ${c.resultMemo ? `<div class="memo-row"><span class="memo-label">결과 메모</span><span class="memo-box">${Storage.escapeHtml(c.resultMemo)}</span></div>` : ""}
+      </div>`;
+  }
+
+  function renderForm(existing) {
+    const c = existing || { type: "vaccine", category: "", name: "", date: Storage.toDateKey(AppState.selectedDate), status: "예정", resultMemo: "" };
+    return `
+      <div class="card card-accent-green" data-editing-id="${existing ? existing.id : ""}">
+        <div class="card-head">
+          <div class="card-head-left"><span class="card-title">${existing ? "접종·검진 수정" : "접종·검진 등록"}</span></div>
+          <div class="toggle-group" id="checkupTypeToggle">
+            <button type="button" class="toggle-btn${c.type !== "screening" ? " active" : ""}" data-type="vaccine">예방접종</button>
+            <button type="button" class="toggle-btn${c.type === "screening" ? " active" : ""}" data-type="screening">건강검진</button>
+          </div>
+        </div>
+        <input type="hidden" data-field="type" value="${c.type === "screening" ? "screening" : "vaccine"}">
+        <div class="visit-grid">
+          <div class="field"><span class="field-label">이름</span><input class="field-box" type="text" data-field="name" value="${Storage.escapeHtml(c.name || "")}" placeholder="예: 인플루엔자 4가"></div>
+          <div class="field"><span class="field-label">날짜</span><input class="field-box" type="date" data-field="date" value="${c.date || ""}"></div>
+          <div class="field"><span class="field-label">구분</span><input class="field-box" type="text" data-field="category" value="${Storage.escapeHtml(c.category || "")}" placeholder="예: 필수 / 국가 / 개인"></div>
+          <div class="field"><span class="field-label">상태</span><input class="field-box" type="text" data-field="status" value="${Storage.escapeHtml(c.status || "")}" placeholder="예: 완료 / 예정"></div>
+        </div>
+        <div class="memo-row">
+          <span class="memo-label">결과 메모</span>
+          <textarea class="memo-box" data-field="resultMemo" placeholder="검사 결과, 경과관찰 사항 등">${Storage.escapeHtml(c.resultMemo || "")}</textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn" data-action="cancel">취소</button>
+          <button type="button" class="btn btn-primary" data-action="save">저장</button>
+        </div>
+      </div>`;
+  }
+
+  function onListClick(e) {
+    const typeBtn = e.target.closest("#checkupTypeToggle button[data-type]");
+    if (typeBtn) {
+      const group = typeBtn.closest("#checkupTypeToggle");
+      group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      typeBtn.classList.add("active");
+      group.closest(".card").querySelector('input[data-field="type"]').value = typeBtn.dataset.type;
+      return;
+    }
+
+    const actionEl = e.target.closest("[data-action]");
+    if (!actionEl) return;
+    const action = actionEl.dataset.action;
+
+    if (action === "edit") {
+      formMode = { edit: actionEl.dataset.id };
+      render();
+    } else if (action === "delete") {
+      if (window.confirm("이 접종·검진 기록을 삭제할까요?")) {
+        Storage.deleteCheckup(actionEl.dataset.id);
+        refresh();
+      }
+    } else if (action === "cancel") {
+      formMode = null;
+      render();
+    } else if (action === "save") {
+      const cardEl = actionEl.closest(".card");
+      const data = {};
+      cardEl.querySelectorAll("[data-field]").forEach(el => { data[el.dataset.field] = el.value; });
+      if (!data.name || !data.name.trim() || !data.date) {
+        window.alert("이름과 날짜는 필수입니다.");
+        return;
+      }
+
+      const editingId = cardEl.dataset.editingId;
+      if (editingId) Storage.updateCheckup(editingId, data);
+      else Storage.addCheckup(AppState.memberId, data);
+
+      formMode = null;
+      refresh();
+    }
+  }
+
+  return { render, init };
+})();
