@@ -83,6 +83,59 @@ const Storage = (() => {
     return list[idx];
   }
 
+  function getProfile(memberId) {
+    return read("profiles").find(p => p.memberId === memberId) || null;
+  }
+
+  function saveProfile(memberId, patch) {
+    const list = read("profiles");
+    const idx = list.findIndex(p => p.memberId === memberId);
+    const now = new Date().toISOString();
+    if (idx === -1) {
+      const rec = {
+        memberId, gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
+        createdAt: now, updatedAt: now,
+        ...patch
+      };
+      list.push(rec);
+      write("profiles", list);
+      return rec;
+    }
+    list[idx] = { ...list[idx], ...patch, updatedAt: now };
+    write("profiles", list);
+    return list[idx];
+  }
+
+  function makeList(storeKey) {
+    function getAll(memberId) {
+      return read(storeKey).filter(x => x.memberId === memberId);
+    }
+    function add(memberId, item) {
+      const list = read(storeKey);
+      const now = new Date().toISOString();
+      const rec = { id: uid(), memberId, createdAt: now, updatedAt: now, ...item };
+      list.push(rec);
+      write(storeKey, list);
+      return rec;
+    }
+    function update(id, patch) {
+      const list = read(storeKey);
+      const idx = list.findIndex(x => x.id === id);
+      if (idx === -1) return null;
+      list[idx] = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
+      write(storeKey, list);
+      return list[idx];
+    }
+    function remove(id) {
+      write(storeKey, read(storeKey).filter(x => x.id !== id));
+    }
+    return { getAll, add, update, remove };
+  }
+
+  const conditionsStore = makeList("conditions");
+  const medicationsStore = makeList("medications");
+  const supplementsStore = makeList("supplements");
+
   function seedIfEmpty() {
     if (getVisits().length === 0) {
       addVisit({
@@ -105,12 +158,43 @@ const Storage = (() => {
         action: "타이레놀 1정 14:20 · 수분 1.2L"
       });
     }
+    if (!getProfile("self")) {
+      saveProfile("self", {
+        gender: "female",
+        birthDate: "1990-05-14",
+        bloodType: "A+",
+        heightCm: 162,
+        weightKg: 54
+      });
+    }
+    if (conditionsStore.getAll("self").length === 0) {
+      conditionsStore.add("self", { name: "알레르기성 비염", memo: "환절기에 증상이 심해짐" });
+    }
+    if (medicationsStore.getAll("self").length === 0) {
+      medicationsStore.add("self", { name: "타이레놀", dosage: "500mg", frequency: "필요 시", memo: "두통·발열 시 복용" });
+    }
+    if (supplementsStore.getAll("self").length === 0) {
+      supplementsStore.add("self", { name: "비타민D", dosage: "1000IU", frequency: "1일 1회", memo: "아침 식후" });
+    }
   }
 
   return {
     toDateKey, escapeHtml,
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
+    getProfile, saveProfile,
+    getConditions: conditionsStore.getAll,
+    addCondition: conditionsStore.add,
+    updateCondition: conditionsStore.update,
+    deleteCondition: conditionsStore.remove,
+    getMedications: medicationsStore.getAll,
+    addMedication: medicationsStore.add,
+    updateMedication: medicationsStore.update,
+    deleteMedication: medicationsStore.remove,
+    getSupplements: supplementsStore.getAll,
+    addSupplement: supplementsStore.add,
+    updateSupplement: supplementsStore.update,
+    deleteSupplement: supplementsStore.remove,
     seedIfEmpty
   };
 })();

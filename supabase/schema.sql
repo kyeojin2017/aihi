@@ -23,6 +23,16 @@ create table if not exists conditions (
   created_at timestamptz not null default now()
 );
 
+create table if not exists medications (
+  id         uuid primary key default gen_random_uuid(),
+  member_id  uuid not null references family_members(id) on delete cascade,
+  name       text not null,
+  dosage     text,
+  frequency  text,
+  memo       text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists supplements (
   id         uuid primary key default gen_random_uuid(),
   member_id  uuid not null references family_members(id) on delete cascade,
@@ -125,6 +135,7 @@ create table if not exists life_logs (
 
 alter table family_members enable row level security;
 alter table conditions enable row level security;
+alter table medications enable row level security;
 alter table supplements enable row level security;
 alter table symptoms enable row level security;
 alter table visits enable row level security;
@@ -140,6 +151,11 @@ create policy "own family members" on family_members
 
 drop policy if exists "own conditions" on conditions;
 create policy "own conditions" on conditions
+  for all using (member_id in (select id from family_members where owner_id = auth.uid()))
+  with check (member_id in (select id from family_members where owner_id = auth.uid()));
+
+drop policy if exists "own medications" on medications;
+create policy "own medications" on medications
   for all using (member_id in (select id from family_members where owner_id = auth.uid()))
   with check (member_id in (select id from family_members where owner_id = auth.uid()));
 

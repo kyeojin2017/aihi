@@ -688,6 +688,22 @@ a:hover { color: var(--primary-dark); }
   border-radius: 12px;
 }
 
+/* ---- Top-level sections (개인정보 / 건강일기 / 생활 바이오리듬) ---- */
+.top-section { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+.profile-page { padding: 22px 26px; gap: 16px; overflow: auto; background: var(--page-bg); }
+
+.profile-lists { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; align-items: start; }
+
+.simple-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.simple-item { border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.simple-item-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.simple-item-name { font-size: 14px; font-weight: 600; min-width: 0; }
+.simple-item-actions { display: flex; gap: 10px; flex: 0 0 auto; }
+.simple-item-meta { font-size: 12.5px; color: var(--gray-soft); font-variant-numeric: tabular-nums; }
+.simple-item-memo { font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+.simple-item-form { gap: 12px; }
+
 /* ---- Inline forms (visit add/edit) ---- */
 input.field-box, select.field-box, textarea.memo-box {
   width: 100%;
