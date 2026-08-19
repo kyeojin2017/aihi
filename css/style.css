@@ -176,6 +176,12 @@ a:hover { color: var(--primary-dark); }
   font-size: 13px;
 }
 
+.family-add-form { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px 4px; }
+.family-add-form input.field-box,
+.family-add-form select.field-box { padding: 7px 10px; font-size: 13px; }
+.family-add-form .btn-row { display: flex; gap: 8px; }
+.family-add-form .btn-row .btn { flex: 1; padding: 6px 0; font-size: 12.5px; text-align: center; }
+
 /* ---- Main ---- */
 .main {
   flex: 1;

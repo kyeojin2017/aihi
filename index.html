@@ -25,12 +25,7 @@
     </nav>
     <div class="family">
       <div class="family-label">가족 구성원</div>
-      <div class="family-list">
-        <div class="family-item active" data-member="self"><span class="family-avatar">나</span>본인<span class="family-count">4건</span></div>
-        <div class="family-item" data-member="spouse"><span class="family-avatar">배</span>배우자<span class="family-count">1건</span></div>
-        <div class="family-item" data-member="seojun"><span class="family-avatar">아</span>서준<span class="family-count">2건</span></div>
-        <div class="family-item family-add"><span class="family-avatar">+</span>구성원 추가</div>
-      </div>
+      <div class="family-list" id="familyList"></div>
     </div>
   </aside>
 
@@ -40,7 +35,7 @@
       <div class="topbar-title">
         <span class="page-name" id="pageName">건강일기</span>
         <span class="topbar-sep"></span>
-        <span class="patient-name">본인 · 김하늘</span>
+        <span class="patient-name" id="patientName"></span>
       </div>
       <div class="ai-search">
         <span class="ai-search-icon"></span>

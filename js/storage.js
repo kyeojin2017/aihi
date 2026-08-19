@@ -83,26 +83,37 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function getProfile(memberId) {
-    return read("profiles").find(p => p.memberId === memberId) || null;
+  function getFamilyMembers() {
+    return read("familyMembers");
   }
 
-  function saveProfile(memberId, patch) {
-    const list = read("profiles");
-    const idx = list.findIndex(p => p.memberId === memberId);
+  function getFamilyMember(id) {
+    return getFamilyMembers().find(m => m.id === id) || null;
+  }
+
+  function addFamilyMember(data) {
+    const list = getFamilyMembers();
     const now = new Date().toISOString();
-    if (idx === -1) {
-      const rec = {
-        memberId, gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
-        createdAt: now, updatedAt: now,
-        ...patch
-      };
-      list.push(rec);
-      write("profiles", list);
-      return rec;
-    }
-    list[idx] = { ...list[idx], ...patch, updatedAt: now };
-    write("profiles", list);
+    const rec = {
+      id: uid(),
+      name: "", relation: "", avatarLabel: (data.name || "?").charAt(0),
+      gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
+      createdAt: now, updatedAt: now,
+      ...data
+    };
+    list.push(rec);
+    write("familyMembers", list);
+    return rec;
+  }
+
+  function updateFamilyMember(id, patch) {
+    const list = getFamilyMembers();
+    const idx = list.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    const next = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
+    if (patch.name) next.avatarLabel = patch.name.charAt(0);
+    list[idx] = next;
+    write("familyMembers", list);
     return list[idx];
   }
 
@@ -187,14 +198,24 @@ const Storage = (() => {
         action: "타이레놀 1정 14:20 · 수분 1.2L"
       });
     }
-    if (!getProfile("self")) {
-      saveProfile("self", {
-        gender: "female",
-        birthDate: "1990-05-14",
-        bloodType: "A+",
-        heightCm: 162,
-        weightKg: 54
-      });
+    if (getFamilyMembers().length === 0) {
+      write("familyMembers", [
+        {
+          id: "self", name: "김하늘", relation: "본인", avatarLabel: "김",
+          gender: "female", birthDate: "1990-05-14", bloodType: "A+", heightCm: 162, weightKg: 54,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        },
+        {
+          id: "spouse", name: "이수진", relation: "배우자", avatarLabel: "이",
+          gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        },
+        {
+          id: "seojun", name: "서준", relation: "자녀", avatarLabel: "서",
+          gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+        }
+      ]);
     }
     if (conditionsStore.getAll("self").length === 0) {
       conditionsStore.add("self", { name: "알레르기성 비염", memo: "환절기에 증상이 심해짐" });
@@ -231,7 +252,7 @@ const Storage = (() => {
     toDateKey, escapeHtml,
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
-    getProfile, saveProfile,
+    getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember,
     getConditions: conditionsStore.getAll,
     addCondition: conditionsStore.add,
     updateCondition: conditionsStore.update,

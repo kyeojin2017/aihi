@@ -1,6 +1,7 @@
 const Profile = (() => {
   const GENDER_LABEL = { male: "남성", female: "여성", other: "기타" };
   const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+  const RELATIONS = ["본인", "배우자", "자녀", "부모", "형제자매", "기타"];
 
   const ENTITY_CONFIG = {
     conditions: { title: "질병", addLabel: "+ 질병 추가", empty: "등록된 질병이 없습니다.", hasDoseFreq: false },
@@ -57,7 +58,7 @@ const Profile = (() => {
   function renderInfoCard() {
     const el = document.getElementById("profileInfoCard");
     if (!el) return;
-    const info = Storage.getProfile(AppState.memberId) || {};
+    const info = Storage.getFamilyMember(AppState.memberId) || {};
     el.innerHTML = editingInfo ? renderInfoForm(info) : renderInfoView(info);
   }
 
@@ -70,6 +71,8 @@ const Profile = (() => {
         <span class="card-link" data-action="edit-info">수정</span>
       </div>
       <div class="visit-grid">
+        <div class="field"><span class="field-label">이름</span><span class="field-box">${Storage.escapeHtml(info.name || "-")}</span></div>
+        <div class="field"><span class="field-label">관계</span><span class="field-box">${Storage.escapeHtml(info.relation || "-")}</span></div>
         <div class="field"><span class="field-label">성별</span><span class="field-box">${GENDER_LABEL[info.gender] || "-"}</span></div>
         <div class="field"><span class="field-label">생년월일</span><span class="field-box">${formatBirthDate(info.birthDate)}${age !== null ? ` (만 ${age}세)` : ""}</span></div>
         <div class="field"><span class="field-label">혈액형</span><span class="field-box">${info.bloodType || "-"}</span></div>
@@ -85,6 +88,13 @@ const Profile = (() => {
         <div class="card-head-left"><span class="card-title">기본 정보 수정</span></div>
       </div>
       <div class="visit-grid">
+        <div class="field"><span class="field-label">이름</span><input class="field-box" type="text" data-field="name" value="${Storage.escapeHtml(info.name || "")}" placeholder="이름"></div>
+        <div class="field">
+          <span class="field-label">관계</span>
+          <select class="field-box" data-field="relation">
+            ${RELATIONS.map(r => `<option value="${r}"${info.relation === r ? " selected" : ""}>${r}</option>`).join("")}
+          </select>
+        </div>
         <div class="field">
           <span class="field-label">성별</span>
           <select class="field-box" data-field="gender">
@@ -180,14 +190,19 @@ const Profile = (() => {
       const cardEl = document.getElementById("profileInfoCard");
       const data = {};
       cardEl.querySelectorAll("[data-field]").forEach(el => { data[el.dataset.field] = el.value; });
+      if (!data.name || !data.name.trim()) {
+        window.alert("이름을 입력해주세요.");
+        return;
+      }
       data.heightCm = data.heightCm === "" ? null : Number(data.heightCm);
       data.weightKg = data.weightKg === "" ? null : Number(data.weightKg);
       data.birthDate = data.birthDate || null;
       data.gender = data.gender || null;
       data.bloodType = data.bloodType || null;
-      Storage.saveProfile(AppState.memberId, data);
+      Storage.updateFamilyMember(AppState.memberId, data);
       editingInfo = false;
       renderInfoCard();
+      if (typeof window.refreshFamilyIdentity === "function") window.refreshFamilyIdentity();
       return;
     }
 

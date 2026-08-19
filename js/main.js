@@ -101,6 +101,54 @@ function renderSummaryPanel() {
     </div>`).join("") : `<div class="symptom-hint">${year}년 병원 방문 기록이 없습니다.</div>`;
 }
 
+let familyAddMode = false;
+
+function countMemberRecords(memberId) {
+  return Storage.getVisits().filter(v => v.memberId === memberId).length
+    + Storage.getSymptoms().filter(s => s.memberId === memberId && s.hasSymptom).length
+    + Storage.getPrescriptions(memberId).length
+    + Storage.getCheckups(memberId).length;
+}
+
+function renderFamilyList() {
+  const el = document.getElementById("familyList");
+  if (!el) return;
+
+  const members = Storage.getFamilyMembers();
+  const itemsHtml = members.map(m => `
+    <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}">
+      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.name || "?").charAt(0))}</span>
+      ${Storage.escapeHtml(m.name || "이름 없음")}
+      <span class="family-count">${countMemberRecords(m.id)}건</span>
+    </div>`).join("");
+
+  const addHtml = familyAddMode ? `
+    <div class="family-add-form">
+      <input type="text" class="field-box" data-field="name" placeholder="이름">
+      <select class="field-box" data-field="relation">
+        ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
+      </select>
+      <div class="btn-row">
+        <button type="button" class="btn" data-action="cancel-add-member">취소</button>
+        <button type="button" class="btn btn-primary" data-action="save-add-member">추가</button>
+      </div>
+    </div>` : `<div class="family-item family-add" data-action="open-add-member"><span class="family-avatar">+</span>구성원 추가</div>`;
+
+  el.innerHTML = itemsHtml + addHtml;
+}
+
+function updateTopbarIdentity() {
+  const member = Storage.getFamilyMember(AppState.memberId);
+  const nameEl = document.getElementById("patientName");
+  if (nameEl) nameEl.textContent = member ? `${member.relation || "구성원"} · ${member.name || "이름 없음"}` : "";
+}
+
+function refreshFamilyIdentity() {
+  renderFamilyList();
+  updateTopbarIdentity();
+}
+window.refreshFamilyIdentity = refreshFamilyIdentity;
+
 function renderRecordDate() {
   const d = AppState.selectedDate;
   document.getElementById("recordDate").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}요일`;
@@ -142,6 +190,7 @@ window.refreshAll = function refreshAll() {
   if (currentView === "photo") Photos.render();
   if (currentView === "report") Report.render();
   if (currentSection === "profile") Profile.render();
+  refreshFamilyIdentity();
 };
 
 function setSection(section) {
@@ -189,14 +238,39 @@ function bindSubtabs() {
 }
 
 function bindFamilySwitch() {
-  document.querySelectorAll(".family-item[data-member]").forEach(item => {
-    item.addEventListener("click", () => {
-      document.querySelectorAll(".family-item[data-member]").forEach(i => i.classList.remove("active"));
-      item.classList.add("active");
-      AppState.memberId = item.dataset.member;
+  document.getElementById("familyList").addEventListener("click", e => {
+    const memberEl = e.target.closest(".family-item[data-member]");
+    if (memberEl) {
+      AppState.memberId = memberEl.dataset.member;
       AppState.visitFilterDate = null;
       window.refreshAll();
-    });
+      return;
+    }
+
+    const actionEl = e.target.closest("[data-action]");
+    if (!actionEl) return;
+    const action = actionEl.dataset.action;
+
+    if (action === "open-add-member") {
+      familyAddMode = true;
+      renderFamilyList();
+    } else if (action === "cancel-add-member") {
+      familyAddMode = false;
+      renderFamilyList();
+    } else if (action === "save-add-member") {
+      const form = actionEl.closest(".family-add-form");
+      const name = form.querySelector('[data-field="name"]').value.trim();
+      const relation = form.querySelector('[data-field="relation"]').value;
+      if (!name) {
+        window.alert("이름을 입력해주세요.");
+        return;
+      }
+      const member = Storage.addFamilyMember({ name, relation });
+      familyAddMode = false;
+      AppState.memberId = member.id;
+      AppState.visitFilterDate = null;
+      window.refreshAll();
+    }
   });
 }
 
@@ -230,6 +304,7 @@ function bindExclusiveToggle(selector) {
 Storage.seedIfEmpty();
 renderCalendar();
 renderRecordDate();
+refreshFamilyIdentity();
 Symptoms.render();
 Visits.init();
 Profile.init();
