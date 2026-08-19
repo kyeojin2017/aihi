@@ -96,6 +96,7 @@
           <span class="legend-item"><span class="legend-dot" style="background:#7E6BB0;"></span>처방전</span>
           <span class="legend-item"><span class="legend-dot" style="background:#C08A5E;"></span>증상</span>
           <span class="legend-item"><span class="legend-dot" style="background:#5B9E7E;"></span>접종·검진</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#AE5480;"></span>생활 기록</span>
         </div>
 
         <div class="monthly-summary">
@@ -293,10 +294,19 @@
       </div>
     </div>
 
-    <div class="top-section" id="biorhythmSection" style="display:none;">
-      <div class="empty-state">
-        <p>생활 바이오리듬 화면은 준비 중입니다.</p>
+    <div class="top-section life-page" id="biorhythmSection" style="display:none;">
+      <div class="visit-view-head">
+        <div class="visit-view-title">
+          <span class="card-title">생활 바이오리듬</span>
+          <span class="life-date-nav">
+            <button type="button" id="lifeDatePrev" aria-label="전날">‹</button>
+            <span class="visit-count" id="lifeDate"></span>
+            <button type="button" id="lifeDateNext" aria-label="다음날">›</button>
+          </span>
+        </div>
+        <span class="life-autosave">입력하면 자동 저장됩니다</span>
       </div>
+      <div class="life-body" id="lifeBody"></div>
     </div>
 
   </div>
@@ -313,6 +323,7 @@
 <script src="js/prescriptions.js"></script>
 <script src="js/checkups.js"></script>
 <script src="js/report.js"></script>
+<script src="js/lifelogs.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const DOT_COLOR = { visit: "#2C6BA8", rx: "#7E6BB0", pain: "#C08A5E", shot: "#5B9E7E" };
+const DOT_COLOR = { visit: "#2C6BA8", rx: "#7E6BB0", pain: "#C08A5E", shot: "#5B9E7E", life: "#AE5480" };
 
 const REAL_TODAY = new Date();
 
@@ -20,6 +20,15 @@ function daysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
 }
 
+// 값이 하나라도 들어간 날만 캘린더에 표시한다 (빈 기록은 점을 찍지 않는다)
+function hasLifeEntry(log) {
+  return (log.meals && log.meals.length > 0) ||
+    log.sleepHours != null || log.waterMl != null ||
+    log.exerciseMin != null || log.caffeineMg != null ||
+    log.alcohol === true || log.isPeriodDay === true ||
+    (log.memo || "").trim() !== "";
+}
+
 function computeMarks(year, month) {
   const prefix = `${year}-${pad2(month + 1)}-`;
   const marks = {};
@@ -36,6 +45,13 @@ function computeMarks(year, month) {
     .forEach(s => {
       const day = Number(s.date.slice(8, 10));
       (marks[day] = marks[day] || new Set()).add("pain");
+    });
+
+  Storage.getLifeLogs()
+    .filter(l => l.memberId === AppState.memberId && l.date && l.date.startsWith(prefix) && hasLifeEntry(l))
+    .forEach(l => {
+      const day = Number(l.date.slice(8, 10));
+      (marks[day] = marks[day] || new Set()).add("life");
     });
 
   const result = {};
@@ -432,6 +448,7 @@ window.refreshAll = function refreshAll() {
   if (currentView === "checkup") Checkups.render();
   if (currentView === "report") Report.render();
   if (currentSection === "profile") Profile.render();
+  if (currentSection === "biorhythm") LifeLogs.render();
   refreshFamilyIdentity();
 };
 
@@ -445,6 +462,18 @@ function setSection(section) {
   document.getElementById("biorhythmSection").style.display = section === "biorhythm" ? "flex" : "none";
   document.getElementById("pageName").textContent = SECTION_LABEL[section];
   if (section === "profile") Profile.render();
+  if (section === "biorhythm") LifeLogs.render();
+}
+
+function bindLifeDateNav() {
+  const shiftDay = delta => {
+    const d = new Date(AppState.selectedDate);
+    d.setDate(d.getDate() + delta);
+    AppState.selectedDate = d;
+    window.refreshAll();
+  };
+  document.getElementById("lifeDatePrev").addEventListener("click", () => shiftDay(-1));
+  document.getElementById("lifeDateNext").addEventListener("click", () => shiftDay(1));
 }
 
 function bindCalendarNav() {
@@ -609,9 +638,11 @@ Profile.init();
 Prescriptions.init();
 Checkups.init();
 Report.init();
+LifeLogs.init();
 setView("today");
 
 bindCalendarNav();
+bindLifeDateNav();
 bindMonthPicker();
 bindSubtabs();
 bindFamilySwitch();

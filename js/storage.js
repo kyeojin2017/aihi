@@ -83,6 +83,36 @@ const Storage = (() => {
     return list[idx];
   }
 
+  // 생활 바이오리듬 — 날짜 + 구성원당 1건 (Supabase 교체 시 upsert 한 번으로 대응)
+  function getLifeLogs() {
+    return read("lifeLogs");
+  }
+
+  function getLifeLog(date, memberId) {
+    return getLifeLogs().find(l => l.date === date && l.memberId === memberId) || null;
+  }
+
+  function saveLifeLog(date, memberId, patch) {
+    const list = getLifeLogs();
+    const idx = list.findIndex(l => l.date === date && l.memberId === memberId);
+    const now = new Date().toISOString();
+    if (idx === -1) {
+      const rec = {
+        id: uid(), date, memberId,
+        meals: [], exerciseMin: null, sleepHours: null, waterMl: null,
+        alcohol: false, caffeineMg: null, isPeriodDay: false, memo: "",
+        createdAt: now, updatedAt: now,
+        ...patch
+      };
+      list.push(rec);
+      write("lifeLogs", list);
+      return rec;
+    }
+    list[idx] = { ...list[idx], ...patch, updatedAt: now };
+    write("lifeLogs", list);
+    return list[idx];
+  }
+
   function getFamilyMembers() {
     return read("familyMembers");
   }
@@ -171,6 +201,22 @@ const Storage = (() => {
         action: "타이레놀 1정 14:20 · 수분 1.2L"
       });
     }
+    if (!getLifeLog("2026-08-08", "self")) {
+      saveLifeLog("2026-08-08", "self", {
+        meals: [
+          { time: "08:10", memo: "죽, 계란찜" },
+          { time: "12:40", memo: "미역국, 흰밥" },
+          { time: "19:00", memo: "누룽지" }
+        ],
+        exerciseMin: 20,
+        sleepHours: 6.5,
+        waterMl: 1200,
+        alcohol: false,
+        caffeineMg: 0,
+        isPeriodDay: false,
+        memo: "미열로 산책만 짧게. 커피는 쉬었음."
+      });
+    }
     if (getFamilyMembers().length === 0) {
       write("familyMembers", [
         {
@@ -225,6 +271,7 @@ const Storage = (() => {
     toDateKey, escapeHtml,
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
+    getLifeLogs, getLifeLog, saveLifeLog,
     getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember,
     getConditions: conditionsStore.getAll,
     addCondition: conditionsStore.add,

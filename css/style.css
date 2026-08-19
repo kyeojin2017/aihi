@@ -782,6 +782,7 @@ a:hover { color: var(--primary-dark); }
 .top-section { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
 .profile-page { padding: 22px 26px; gap: 16px; overflow: auto; background: var(--page-bg); }
+.life-page { padding: 22px 26px; gap: 16px; overflow: auto; background: var(--page-bg); }
 
 .profile-lists { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; align-items: start; }
 
@@ -879,6 +880,212 @@ textarea.memo-box { resize: vertical; min-height: 56px; }
 
 .auth-forgot-link { display: block; text-align: center; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
 .auth-forgot-link:hover { color: var(--primary); }
+
+/* ---- Life logs (생활 바이오리듬) ---- */
+.life-date-nav { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.life-date-nav button {
+  width: 26px; height: 26px; border: 1px solid var(--border); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gray); font-size: 13px; background: #fff; cursor: pointer; font-family: inherit;
+}
+.life-autosave { font-size: 12.5px; color: var(--muted); }
+.life-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
+.life-card { display: flex; flex-direction: column; gap: 14px; }
+.life-hint { font-size: 13.5px; color: var(--muted); }
+
+/* 지표 타일 — 항목별 색으로 한눈에 구분한다 */
+.tone-sleep    { --tone: #6E63B5; --tone-tint: #EFEDF9; }
+.tone-water    { --tone: #2C6BA8; --tone-tint: #E8F0F8; }
+.tone-exercise { --tone: #C2673C; --tone-tint: #FBEDE5; }
+.tone-caffeine { --tone: #4C7F62; --tone-tint: #E9F2EC; }
+.tone-meal     { --tone: #A9812F; --tone-tint: #F8F1E1; }
+.tone-alcohol  { --tone: #A4553F; --tone-tint: #F9EBE6; }
+.tone-period   { --tone: #AE5480; --tone-tint: #FAEAF2; }
+
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--tone-tint) 0%, #fff 58%);
+}
+
+/* 아이콘은 항목 색을 꽉 채워 멀리서도 구분되게 한다 */
+.metric-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--tone);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px -3px var(--tone);
+}
+.metric-icon svg { width: 26px; height: 26px; stroke-width: 2.1; }
+
+.metric-label { font-size: 13.5px; font-weight: 600; color: var(--text-soft); }
+
+/* 값은 타일 아래쪽에 붙여 나란히 읽히게 한다 */
+.metric-value { margin-top: auto; display: flex; align-items: baseline; gap: 5px; }
+.metric-value input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--tone);
+  font-variant-numeric: tabular-nums;
+}
+.metric-value input:focus { outline: none; }
+.metric-value input::placeholder { color: var(--muted-soft); }
+.metric-value input::-webkit-outer-spin-button,
+.metric-value input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.metric-value input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.metric-unit { font-size: 13px; color: var(--gray-soft); flex: 0 0 auto; }
+
+.metric-progress { height: 5px; border-radius: 3px; background: var(--white); overflow: hidden; }
+.metric-progress span { display: block; height: 100%; background: var(--tone); border-radius: 3px; }
+
+.metric-actions { display: flex; align-items: center; gap: 8px; }
+.metric-actions button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--tone);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.metric-actions button:hover { border-color: var(--tone); }
+.metric-hint { flex: 1; text-align: center; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+/* 섹션 헤더 */
+.section-head { display: flex; align-items: center; gap: 10px; }
+.section-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--tone);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: 0 3px 8px -3px var(--tone);
+}
+.section-icon svg { width: 20px; height: 20px; stroke-width: 2.1; }
+.section-title { font-size: 15.5px; font-weight: 600; }
+.section-count { font-size: 12.5px; color: var(--muted); }
+
+.chip-btn {
+  margin-left: auto;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--primary);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.chip-btn:hover { border-color: var(--primary); }
+
+/* 오늘의 상태 */
+.flag-row { display: flex; gap: 9px; flex-wrap: wrap; }
+.flag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--gray);
+  font-size: 13.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.flag-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.flag-icon svg { width: 16px; height: 16px; stroke-width: 2.1; }
+.flag.on { background: var(--tone-tint); border-color: var(--tone); color: var(--tone); font-weight: 600; }
+.flag.on .flag-icon { background: var(--tone); color: #fff; }
+
+.life-memo {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-soft);
+  background: var(--white);
+  resize: vertical;
+  min-height: 62px;
+}
+.life-memo:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+
+.life-empty { font-size: 13.5px; color: var(--muted); padding: 4px 0; }
+
+.meal-list { display: flex; flex-direction: column; gap: 8px; }
+.meal-row { display: flex; align-items: center; gap: 8px; }
+.meal-row .meal-time { width: 148px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.meal-remove {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.meal-remove:hover { color: var(--red); border-color: var(--red); }
+
+/* 수면 추이 */
+.trend { display: flex; flex-direction: column; gap: 10px; --tone: #6E63B5; }
+.trend-bars { display: flex; align-items: flex-end; gap: 10px; height: 112px; }
+.trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
+.trend-value { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; height: 14px; }
+.trend-track {
+  flex: 1;
+  width: 100%;
+  max-width: 34px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--panel-bg);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.trend-fill { width: 100%; background: #C9C3E6; border-radius: 6px; }
+.trend-col.selected .trend-fill { background: var(--tone); }
+.trend-col.selected .trend-value { color: var(--tone); font-weight: 600; }
+.trend-day { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trend-note { font-size: 13px; color: var(--gray-soft); }
 
 /* ---- Print (PDF export) ---- */
 @media print {
