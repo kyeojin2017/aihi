@@ -707,9 +707,10 @@ textarea.memo-box { resize: vertical; min-height: 56px; }
 
 /* ---- Life logs (생활 바이오리듬) ---- */
 /* 캘린더 옆 통계·범례는 건강일기 전용이라 이 화면에서는 감춘다 */
-body[data-page="life"] .legend,
 body[data-page="life"] .monthly-summary,
 body[data-page="life"] .dept-breakdown { display: none; }
+/* 생활 화면에서는 범례를 이 화면과 관련된 항목만 남긴다 */
+body[data-page="life"] .legend-item:not(.legend-life) { display: none; }
 
 .life-autosave { font-size: 12.5px; color: var(--muted); }
 .life-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 16px; }
