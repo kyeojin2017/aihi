@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>건강비서 — 건강일기</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2C6BA8">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="건강비서">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -25,12 +31,7 @@
     </nav>
     <div class="family">
       <div class="family-label">가족 구성원</div>
-      <div class="family-list">
-        <div class="family-item active" data-member="self"><span class="family-avatar">나</span>본인<span class="family-count">4건</span></div>
-        <div class="family-item" data-member="spouse"><span class="family-avatar">배</span>배우자<span class="family-count">1건</span></div>
-        <div class="family-item" data-member="seojun"><span class="family-avatar">아</span>서준<span class="family-count">2건</span></div>
-        <div class="family-item family-add"><span class="family-avatar">+</span>구성원 추가</div>
-      </div>
+      <div class="family-list" id="familyList"></div>
     </div>
   </aside>
 
@@ -238,12 +239,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/supabaseConfig.js"></script>
-<script src="js/supabaseClient.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/symptoms.js"></script>
 <script src="js/visits.js"></script>
 <script src="js/main.js"></script>
+<script src="js/pwa.js"></script>
 </body>
 </html>

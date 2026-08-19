@@ -13,7 +13,7 @@ const Visits = (() => {
     document.getElementById("visitList").addEventListener("click", onListClick);
   }
 
-  function onListClick(e) {
+  async function onListClick(e) {
     const actionEl = e.target.closest("[data-action]");
     if (!actionEl) return;
     const action = actionEl.dataset.action;
@@ -23,8 +23,8 @@ const Visits = (() => {
       render();
     } else if (action === "delete") {
       if (window.confirm("이 병원 방문 기록을 삭제할까요?")) {
-        Storage.deleteVisit(actionEl.dataset.id);
-        refresh();
+        await Storage.deleteVisit(actionEl.dataset.id);
+        await refresh();
       }
     } else if (action === "cancel") {
       formMode = null;
@@ -41,24 +41,25 @@ const Visits = (() => {
       data.memberId = AppState.memberId;
 
       const editingId = cardEl.dataset.editingId;
-      if (editingId) Storage.updateVisit(editingId, data);
-      else Storage.addVisit(data);
+      if (editingId) await Storage.updateVisit(editingId, data);
+      else await Storage.addVisit(data);
 
       formMode = null;
-      refresh();
+      await refresh();
     }
   }
 
-  function refresh() {
-    if (typeof window.refreshAll === "function") window.refreshAll();
-    else render();
+  async function refresh() {
+    if (typeof window.refreshAll === "function") await window.refreshAll();
+    else await render();
   }
 
-  function render() {
+  async function render() {
     const listEl = document.getElementById("visitList");
     if (!listEl) return;
 
-    const all = Storage.getVisits().filter(v => v.memberId === AppState.memberId);
+    const allRaw = await Storage.getVisits();
+    const all = allRaw.filter(v => v.memberId === AppState.memberId);
     const filtered = AppState.visitFilterDate ? all.filter(v => v.date === AppState.visitFilterDate) : all;
     const sorted = filtered.slice().sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
 
@@ -72,7 +73,8 @@ const Visits = (() => {
       filterChip.style.display = "none";
     }
 
-    const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findVisit(formMode.edit) : null) : "";
+    const editingRecord = formMode && typeof formMode === "object" ? all.find(v => v.id === formMode.edit) : null;
+    const formHtml = formMode ? renderForm(editingRecord) : "";
     const itemsHtml = sorted
       .filter(v => !(formMode && typeof formMode === "object" && formMode.edit === v.id))
       .map(renderCard)
@@ -83,10 +85,6 @@ const Visits = (() => {
     } else {
       listEl.innerHTML = formHtml + itemsHtml;
     }
-  }
-
-  function findVisit(id) {
-    return Storage.getVisits().find(v => v.id === id) || null;
   }
 
   function formatDateLabel(dateKey) {

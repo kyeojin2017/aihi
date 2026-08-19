@@ -1,12 +1,12 @@
 const Symptoms = (() => {
   const PRESET_TAGS = ["인후통", "오한", "두통", "복통"];
 
-  function render() {
+  async function render() {
     const card = document.getElementById("symptomCard");
     if (!card) return;
 
     const dateKey = Storage.toDateKey(AppState.selectedDate);
-    const rec = Storage.getSymptom(dateKey, AppState.memberId) ||
+    const rec = (await Storage.getSymptom(dateKey, AppState.memberId)) ||
       { hasSymptom: null, tags: [], painLevel: null, temperature: null, action: "" };
 
     card.innerHTML = `
@@ -62,10 +62,10 @@ const Symptoms = (() => {
       </div>`;
   }
 
-  function save(dateKey, patch) {
-    Storage.saveSymptom(dateKey, AppState.memberId, patch);
-    if (typeof window.refreshAll === "function") window.refreshAll();
-    else render();
+  async function save(dateKey, patch) {
+    await Storage.saveSymptom(dateKey, AppState.memberId, patch);
+    if (typeof window.refreshAll === "function") await window.refreshAll();
+    else await render();
   }
 
   function bindEvents(card, dateKey, rec) {
