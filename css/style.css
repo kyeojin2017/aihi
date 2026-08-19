@@ -70,19 +70,19 @@ a:hover { color: var(--primary-dark); }
 }
 
 .brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
   background: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
-
-.brand-name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
 
 .nav { display: flex; flex-direction: column; gap: 4px; }
 
@@ -271,16 +271,16 @@ a:hover { color: var(--primary-dark); }
 }
 
 .avatar-badge {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--primary-tint);
-  color: var(--primary);
-  font-size: 12px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  background: var(--primary-tint);
+  color: var(--primary-dark);
+  border-color: transparent;
+  font-weight: 500;
 }
+
+.logout-heart { width: 14px; height: 14px; flex: 0 0 auto; color: var(--red); }
 
 .subtabs {
   height: 56px;
