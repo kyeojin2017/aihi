@@ -207,6 +207,7 @@ a:hover { color: var(--primary-dark); }
 .topbar-title .patient-name { font-size: 14px; color: var(--gray); }
 
 .ai-search {
+  position: relative;
   flex: 1;
   max-width: 520px;
   display: flex;
@@ -220,6 +221,35 @@ a:hover { color: var(--primary-dark); }
   font-size: 14px;
   cursor: text;
 }
+
+.ai-search-results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 360px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(20,24,28,0.12);
+  padding: 8px;
+}
+.ai-search-results.open { display: block; }
+
+.ai-search-empty { padding: 14px 12px; font-size: 13px; color: var(--muted); text-align: center; }
+
+.ai-search-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 9px; cursor: pointer;
+}
+.ai-search-item:hover { background: var(--panel-bg); }
+.ai-search-item .badge { flex: 0 0 auto; }
+.ai-search-item-text { flex: 1; min-width: 0; font-size: 13.5px; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-search-item-text strong { color: var(--text); font-weight: 600; }
+.ai-search-item-date { flex: 0 0 auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 
 .ai-search-icon {
   width: 15px;

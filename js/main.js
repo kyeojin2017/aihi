@@ -263,6 +263,112 @@ function buildReportSummaryText() {
   return lines.join("\n");
 }
 
+const SEARCH_BADGE = { visit: ["병원방문", "badge-blue"], rx: ["처방전", "badge-neutral"], checkup: ["접종·검진", "badge-green"], symptom: ["증상", "badge-neutral"] };
+
+function searchRecords(query) {
+  const keywords = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!keywords.length) return [];
+
+  const memberId = AppState.memberId;
+  const results = [];
+
+  const matches = text => keywords.every(k => text.toLowerCase().includes(k));
+
+  Storage.getVisits().filter(v => v.memberId === memberId).forEach(v => {
+    const blob = [v.hospital, v.department, v.doctor, v.diagnosisMemo].filter(Boolean).join(" ");
+    if (matches(blob)) {
+      results.push({ type: "visit", date: v.date, text: `<strong>${Storage.escapeHtml(v.hospital || "")}</strong>${v.department ? ` · ${Storage.escapeHtml(v.department)}` : ""}` });
+    }
+  });
+
+  Storage.getPrescriptions(memberId).forEach(p => {
+    const blob = [(p.items || []).map(it => it.drugName).join(" "), p.cautionMemo].filter(Boolean).join(" ");
+    if (matches(blob)) {
+      results.push({ type: "rx", date: p.startDate, text: `<strong>${Storage.escapeHtml((p.items || []).map(it => it.drugName).join(", "))}</strong>` });
+    }
+  });
+
+  Storage.getCheckups(memberId).forEach(c => {
+    const blob = [c.name, c.category, c.resultMemo].filter(Boolean).join(" ");
+    if (matches(blob)) {
+      results.push({ type: "checkup", date: c.date, text: `<strong>${Storage.escapeHtml(c.name || "")}</strong>${c.category ? ` · ${Storage.escapeHtml(c.category)}` : ""}` });
+    }
+  });
+
+  Storage.getSymptoms().filter(s => s.memberId === memberId && s.hasSymptom).forEach(s => {
+    const blob = [(s.tags || []).join(" "), s.action].filter(Boolean).join(" ");
+    if (matches(blob)) {
+      results.push({ type: "symptom", date: s.date, text: `<strong>${Storage.escapeHtml((s.tags || []).join(", ") || "증상")}</strong>${s.action ? ` · ${Storage.escapeHtml(s.action)}` : ""}` });
+    }
+  });
+
+  results.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  return results.slice(0, 20);
+}
+
+function renderSearchResults(query) {
+  const panel = document.getElementById("aiSearchResults");
+  if (!panel) return;
+
+  if (!query.trim()) {
+    panel.classList.remove("open");
+    panel.innerHTML = "";
+    return;
+  }
+
+  const results = searchRecords(query);
+  panel.classList.add("open");
+
+  if (!results.length) {
+    panel.innerHTML = `<div class="ai-search-empty">"${Storage.escapeHtml(query)}"에 대한 검색 결과가 없습니다.</div>`;
+    return;
+  }
+
+  panel.innerHTML = results.map(r => {
+    const [label, badgeClass] = SEARCH_BADGE[r.type];
+    return `
+      <div class="ai-search-item" data-type="${r.type}" data-date="${r.date || ""}">
+        <span class="badge ${badgeClass}">${label}</span>
+        <span class="ai-search-item-text">${r.text}</span>
+        <span class="ai-search-item-date">${r.date ? formatMonthDay(r.date) : ""}</span>
+      </div>`;
+  }).join("");
+}
+
+function bindAiSearch() {
+  const input = document.getElementById("aiSearchInput");
+  const panel = document.getElementById("aiSearchResults");
+  if (!input || !panel) return;
+
+  input.addEventListener("input", () => renderSearchResults(input.value));
+  input.addEventListener("focus", () => { if (input.value.trim()) renderSearchResults(input.value); });
+
+  panel.addEventListener("click", e => {
+    const item = e.target.closest(".ai-search-item[data-date]");
+    if (!item || !item.dataset.date) return;
+
+    const [y, m, d] = item.dataset.date.split("-").map(Number);
+    AppState.selectedDate = new Date(y, m - 1, d);
+
+    const tabByType = { visit: "visit", rx: "rx", checkup: "checkup", symptom: "today" };
+    const tab = tabByType[item.dataset.type] || "today";
+    document.querySelectorAll(".subtab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+    if (currentSection !== "diary") setSection("diary");
+    setView(tab);
+    window.refreshAll();
+
+    input.value = "";
+    panel.classList.remove("open");
+    panel.innerHTML = "";
+  });
+
+  document.addEventListener("click", e => {
+    if (!document.querySelector(".ai-search").contains(e.target)) {
+      panel.classList.remove("open");
+    }
+  });
+}
+
 function bindTopbarActions() {
   document.getElementById("exportPdfBtn").addEventListener("click", () => {
     window.print();
@@ -513,3 +619,4 @@ bindTopNav();
 bindTabLinks();
 bindRecordViewToggle();
 bindTopbarActions();
+bindAiSearch();
