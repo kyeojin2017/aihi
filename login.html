@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>건강비서 — 로그인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="auth-brand-name">건강비서</span>
+    </div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" data-mode="login">로그인</div>
+      <div class="auth-tab" data-mode="signup">회원가입</div>
+    </div>
+
+    <div id="authMessage"></div>
+
+    <form class="auth-form" id="authForm">
+      <div class="auth-field">
+        <label for="authEmail">이메일</label>
+        <input type="email" id="authEmail" autocomplete="email" required placeholder="you@example.com">
+      </div>
+      <div class="auth-field" id="authPasswordField">
+        <label for="authPassword">비밀번호</label>
+        <input type="password" id="authPassword" autocomplete="current-password" required minlength="8" placeholder="8자 이상">
+      </div>
+      <div class="auth-field" id="authPasswordConfirmField">
+        <label for="authPasswordConfirm">비밀번호 확인</label>
+        <input type="password" id="authPasswordConfirm" autocomplete="new-password" placeholder="비밀번호 다시 입력">
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit" id="authSubmitBtn">로그인</button>
+    </form>
+
+    <p class="auth-hint" id="authHint"></p>
+    <a href="#" class="auth-forgot-link" id="authForgotLink">비밀번호를 잊으셨나요?</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabaseConfig.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>

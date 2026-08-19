@@ -215,7 +215,8 @@ create policy "own visits" on visits
     스키마 작업 등 DB에 직접 붙어야 할 때는 **Connection pooling(Transaction pooler)** 주소를 써야 함:
     `aws-0-ap-northeast-1.pooler.supabase.com:6543`, user `postgres.ixngwiwcfdbhtoycwkpl`
 - [x] `supabase/schema.sql` 작성 + 실제 DB에 적용 완료 — 테이블 10개(family_members, conditions, supplements, symptoms, visits, prescriptions, prescription_items, checkups, photos, life_logs) 전부 생성, RLS 전 테이블 활성화 + 정책 1개씩 확인 완료
-- [ ] 로그인 화면 추가 (Supabase Auth — 이메일/매직링크)
+- [x] 로그인 화면 추가 (`login.html` + `js/login.js`, Supabase Auth 이메일/비밀번호 — 매직링크는 보류)
+  - `js/auth.js`가 `index.html` 진입 시 세션 체크 후 비로그인 상태면 `login.html`로 리다이렉트, 아바타 클릭 시 로그아웃
 - [ ] `family_members` 시딩 (본인/배우자/서준) — RLS가 `owner_id = auth.uid()` 기준이라 로그인 붙기 전에는 시딩 불가
 - [ ] `js/storage.js`를 Supabase 호출로 교체 (함수 시그니처 유지, 내부만 async/await + supabase-js 쿼리로 교체)
 - [ ] `symptoms.js`/`visits.js`의 `Storage.xxx()` 호출부에 `await` 추가, 저장 중 로딩 상태 표시
