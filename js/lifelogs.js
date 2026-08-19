@@ -28,30 +28,30 @@ const LifeLogs = (() => {
     panel.addEventListener("change", onChange);
   }
 
-  function current() {
+  async function current() {
     const dateKey = Storage.toDateKey(AppState.selectedDate);
-    const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
+    const rec = (await Storage.getLifeLog(dateKey, AppState.memberId)) || {
       meals: [], exerciseMin: null, sleepHours: null, waterMl: null,
       alcohol: false, caffeineMg: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
   }
 
-  function save(patch) {
-    const { dateKey } = current();
-    Storage.saveLifeLog(dateKey, AppState.memberId, patch);
-    if (typeof window.refreshAll === "function") window.refreshAll();
-    else render();
+  async function save(patch) {
+    const { dateKey } = await current();
+    await Storage.saveLifeLog(dateKey, AppState.memberId, patch);
+    if (typeof window.refreshAll === "function") await window.refreshAll();
+    else await render();
   }
 
   function numOrNull(value) {
     return value === "" ? null : Number(value);
   }
 
-  function onChange(e) {
+  async function onChange(e) {
     const el = e.target.closest("[data-field]");
     if (!el) return;
-    const { rec } = current();
+    const { rec } = await current();
     const field = el.dataset.field;
 
     if (field === "mealTime" || field === "mealMemo") {
@@ -59,52 +59,52 @@ const LifeLogs = (() => {
       const meals = (rec.meals || []).map((m, i) =>
         i === idx ? { ...m, [field === "mealTime" ? "time" : "memo"]: el.value } : m
       );
-      save({ meals });
+      await save({ meals });
       return;
     }
     if (field === "memo") {
-      save({ memo: el.value });
+      await save({ memo: el.value });
       return;
     }
-    save({ [field]: numOrNull(el.value) });
+    await save({ [field]: numOrNull(el.value) });
   }
 
-  function onClick(e) {
+  async function onClick(e) {
     const el = e.target.closest("[data-action]");
     if (!el) return;
-    const { rec } = current();
+    const { rec } = await current();
     const action = el.dataset.action;
 
     if (action === "addMeal") {
-      save({ meals: [...(rec.meals || []), { time: "", memo: "" }] });
+      await save({ meals: [...(rec.meals || []), { time: "", memo: "" }] });
     } else if (action === "removeMeal") {
       const idx = Number(el.dataset.index);
-      save({ meals: (rec.meals || []).filter((_, i) => i !== idx) });
+      await save({ meals: (rec.meals || []).filter((_, i) => i !== idx) });
     } else if (action === "water") {
       const next = Math.max(0, (rec.waterMl || 0) + Number(el.dataset.delta));
-      save({ waterMl: next });
+      await save({ waterMl: next });
     } else if (action === "toggleAlcohol") {
-      save({ alcohol: !rec.alcohol });
+      await save({ alcohol: !rec.alcohol });
     } else if (action === "togglePeriod") {
-      save({ isPeriodDay: !rec.isPeriodDay });
+      await save({ isPeriodDay: !rec.isPeriodDay });
     }
   }
 
-  function trendData(dateKey) {
+  function trendData(dateKey, logs) {
     const [y, m, d] = dateKey.split("-").map(Number);
     const end = new Date(y, m - 1, d);
     const days = [];
     for (let i = TREND_DAYS - 1; i >= 0; i--) {
       const day = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i);
       const key = Storage.toDateKey(day);
-      const log = Storage.getLifeLog(key, AppState.memberId);
+      const log = logs.find(l => l.date === key && l.memberId === AppState.memberId);
       days.push({ key, day, sleepHours: log && log.sleepHours != null ? log.sleepHours : null });
     }
     return days;
   }
 
-  function renderTrend(dateKey) {
-    const days = trendData(dateKey);
+  function renderTrend(dateKey, logs) {
+    const days = trendData(dateKey, logs);
     const recorded = days.filter(d => d.sleepHours != null);
     if (recorded.length === 0) {
       return `<div class="life-empty">아직 수면 기록이 없습니다. 수면 시간을 입력하면 여기에 추이가 쌓입니다.</div>`;
@@ -159,11 +159,12 @@ const LifeLogs = (() => {
       </div>`).join("");
   }
 
-  function render() {
+  async function render() {
     const body = document.getElementById("lifeBody");
     if (!body) return;
 
-    const { dateKey, rec } = current();
+    const { dateKey, rec } = await current();
+    const allLogs = await Storage.getLifeLogs();
     const d = AppState.selectedDate;
     document.getElementById("lifeDate").textContent =
       `${d.getMonth() + 1}월 ${d.getDate()}일 기록`;
@@ -231,7 +232,7 @@ const LifeLogs = (() => {
           <span class="section-title">수면 추이</span>
           <span class="section-count">최근 7일</span>
         </div>
-        <div class="trend">${renderTrend(dateKey)}</div>
+        <div class="trend">${renderTrend(dateKey, allLogs)}</div>
       </div>
     `;
   }

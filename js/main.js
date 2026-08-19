@@ -5,13 +5,14 @@ const REAL_TODAY = new Date();
 
 window.AppState = {
   selectedDate: new Date(REAL_TODAY),
-  memberId: "self",
+  memberId: null,
   visitFilterDate: null
 };
 
 let currentView = "today";
 let currentPage = "diary";
 const calendarState = { year: REAL_TODAY.getFullYear(), month: REAL_TODAY.getMonth() };
+let boundOnce = false;
 
 function pad2(n) { return String(n).padStart(2, "0"); }
 
@@ -28,25 +29,29 @@ function hasLifeEntry(log) {
     (log.memo || "").trim() !== "";
 }
 
-function computeMarks(year, month) {
+async function computeMarks(year, month) {
   const prefix = `${year}-${pad2(month + 1)}-`;
   const marks = {};
 
-  Storage.getVisits()
+  const [visits, symptoms, lifeLogs] = await Promise.all([
+    Storage.getVisits(), Storage.getSymptoms(), Storage.getLifeLogs()
+  ]);
+
+  visits
     .filter(v => v.memberId === AppState.memberId && v.date && v.date.startsWith(prefix))
     .forEach(v => {
       const day = Number(v.date.slice(8, 10));
       (marks[day] = marks[day] || new Set()).add("visit");
     });
 
-  Storage.getSymptoms()
+  symptoms
     .filter(s => s.memberId === AppState.memberId && s.date && s.date.startsWith(prefix) && s.hasSymptom)
     .forEach(s => {
       const day = Number(s.date.slice(8, 10));
       (marks[day] = marks[day] || new Set()).add("pain");
     });
 
-  Storage.getLifeLogs()
+  lifeLogs
     .filter(l => l.memberId === AppState.memberId && l.date && l.date.startsWith(prefix) && hasLifeEntry(l))
     .forEach(l => {
       const day = Number(l.date.slice(8, 10));
@@ -58,7 +63,7 @@ function computeMarks(year, month) {
   return result;
 }
 
-function renderCalendar() {
+async function renderCalendar() {
   const { year, month } = calendarState;
 
   document.getElementById("calendarMonth").textContent = `${year}년 ${month + 1}월`;
@@ -66,7 +71,7 @@ function renderCalendar() {
 
   const lead = new Date(year, month, 1).getDay();
   const total = daysInMonth(year, month);
-  const marks = computeMarks(year, month);
+  const marks = await computeMarks(year, month);
   const isRealCurrentMonth = year === REAL_TODAY.getFullYear() && month === REAL_TODAY.getMonth();
   const selectedKey = Storage.toDateKey(AppState.selectedDate);
 
@@ -132,16 +137,31 @@ function setPage(page) {
   if (page === "life") LifeLogs.render();
 }
 
-window.refreshAll = function refreshAll() {
-  renderCalendar();
+window.refreshAll = async function refreshAll() {
+  await Promise.all([renderCalendar(), Symptoms.render()]);
   renderRecordDate();
-  Symptoms.render();
   if (currentPage === "life") {
-    LifeLogs.render();
+    await LifeLogs.render();
     return;
   }
-  if (currentView === "visit") Visits.render();
+  if (currentView === "visit") await Visits.render();
 };
+
+function renderFamilySidebar(members) {
+  const list = document.getElementById("familyList");
+  const itemsHtml = members.map(m => `
+    <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}">
+      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || m.name.slice(0, 1))}</span>${Storage.escapeHtml(m.name)}
+    </div>`).join("");
+  list.innerHTML = itemsHtml + `
+    <div class="family-item family-add"><span class="family-avatar">+</span>구성원 추가</div>`;
+
+  const activeMember = members.find(m => m.id === AppState.memberId);
+  if (activeMember) {
+    document.querySelector(".patient-name").textContent = `${activeMember.name} · 김하늘`;
+    document.querySelector(".avatar-badge").textContent = activeMember.avatarLabel || activeMember.name.slice(0, 1);
+  }
+}
 
 function bindCalendarNav() {
   document.getElementById("calendarPrev").addEventListener("click", () => {
@@ -186,14 +206,16 @@ function bindNav() {
 }
 
 function bindFamilySwitch() {
-  document.querySelectorAll(".family-item[data-member]").forEach(item => {
-    item.addEventListener("click", () => {
-      document.querySelectorAll(".family-item[data-member]").forEach(i => i.classList.remove("active"));
-      item.classList.add("active");
-      AppState.memberId = item.dataset.member;
-      AppState.visitFilterDate = null;
-      window.refreshAll();
-    });
+  document.getElementById("familyList").addEventListener("click", e => {
+    const item = e.target.closest(".family-item[data-member]");
+    if (!item) return;
+    document.querySelectorAll(".family-item[data-member]").forEach(i => i.classList.remove("active"));
+    item.classList.add("active");
+    AppState.memberId = item.dataset.member;
+    AppState.visitFilterDate = null;
+    const name = item.textContent.trim();
+    document.querySelector(".patient-name").textContent = `${name} · 김하늘`;
+    window.refreshAll();
   });
 }
 
@@ -208,16 +230,26 @@ function bindExclusiveToggle(selector) {
   });
 }
 
-Storage.seedIfEmpty();
-renderCalendar();
-renderRecordDate();
-Symptoms.render();
-Visits.init();
-LifeLogs.init();
-setView("today");
+window.initApp = async function initApp() {
+  const members = await Storage.ensureSeedFamilyMembers();
+  await Storage.seedSampleData();
+  AppState.memberId = members[0].id;
+  renderFamilySidebar(members);
 
-bindCalendarNav();
-bindSubtabs();
-bindNav();
-bindFamilySwitch();
-bindExclusiveToggle(".view-toggle");
+  await renderCalendar();
+  renderRecordDate();
+  await Symptoms.render();
+  if (!boundOnce) {
+    Visits.init();
+    LifeLogs.init();
+    bindCalendarNav();
+    bindSubtabs();
+    bindNav();
+    bindFamilySwitch();
+    bindExclusiveToggle(".view-toggle");
+    boundOnce = true;
+  }
+  setView("today");
+};
+
+window.initApp();

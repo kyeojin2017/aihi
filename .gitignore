@@ -8,3 +8,13 @@ supabase/.env.local
 hhh/
 *.jpg
 *.jpeg
+# Capacitor web copy (regenerate: cp -r index.html css js manifest.json sw.js icons www/)
+www/
+
+# Android build outputs / machine-specific files
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+*.apk

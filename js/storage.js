@@ -29,12 +29,32 @@ const Storage = (() => {
     return `${y}-${m}-${d}`;
   }
 
-  function getVisits() {
+  // ---- family members ----
+
+  async function getFamilyMembers() {
+    return read("familyMembers");
+  }
+
+  async function ensureSeedFamilyMembers() {
+    const existing = read("familyMembers");
+    if (existing.length > 0) return existing;
+    const defaults = [
+      { id: "self", name: "본인", avatarLabel: "나" },
+      { id: "spouse", name: "배우자", avatarLabel: "배" },
+      { id: "seojun", name: "서준", avatarLabel: "아" }
+    ];
+    write("familyMembers", defaults);
+    return defaults;
+  }
+
+  // ---- visits ----
+
+  async function getVisits() {
     return read("visits");
   }
 
-  function addVisit(visit) {
-    const list = getVisits();
+  async function addVisit(visit) {
+    const list = read("visits");
     const now = new Date().toISOString();
     const rec = { id: uid(), createdAt: now, updatedAt: now, ...visit };
     list.push(rec);
@@ -42,8 +62,8 @@ const Storage = (() => {
     return rec;
   }
 
-  function updateVisit(id, patch) {
-    const list = getVisits();
+  async function updateVisit(id, patch) {
+    const list = read("visits");
     const idx = list.findIndex(v => v.id === id);
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
@@ -51,20 +71,22 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function deleteVisit(id) {
-    write("visits", getVisits().filter(v => v.id !== id));
+  async function deleteVisit(id) {
+    write("visits", read("visits").filter(v => v.id !== id));
   }
 
-  function getSymptoms() {
+  // ---- symptoms ----
+
+  async function getSymptoms() {
     return read("symptoms");
   }
 
-  function getSymptom(date, memberId) {
-    return getSymptoms().find(s => s.date === date && s.memberId === memberId) || null;
+  async function getSymptom(date, memberId) {
+    return read("symptoms").find(s => s.date === date && s.memberId === memberId) || null;
   }
 
-  function saveSymptom(date, memberId, patch) {
-    const list = getSymptoms();
+  async function saveSymptom(date, memberId, patch) {
+    const list = read("symptoms");
     const idx = list.findIndex(s => s.date === date && s.memberId === memberId);
     const now = new Date().toISOString();
     if (idx === -1) {
@@ -83,16 +105,18 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function getLifeLogs() {
+  // 생활 바이오리듬 — 날짜 + 구성원당 1건 (Supabase 교체 시 upsert 한 번으로 대응)
+  async function getLifeLogs() {
     return read("lifeLogs");
   }
 
-  function getLifeLog(date, memberId) {
-    return getLifeLogs().find(l => l.date === date && l.memberId === memberId) || null;
+  async function getLifeLog(date, memberId) {
+    const list = await getLifeLogs();
+    return list.find(l => l.date === date && l.memberId === memberId) || null;
   }
 
-  function saveLifeLog(date, memberId, patch) {
-    const list = getLifeLogs();
+  async function saveLifeLog(date, memberId, patch) {
+    const list = await getLifeLogs();
     const idx = list.findIndex(l => l.date === date && l.memberId === memberId);
     const now = new Date().toISOString();
     if (idx === -1) {
@@ -112,9 +136,10 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function seedIfEmpty() {
-    if (getVisits().length === 0) {
-      addVisit({
+  async function seedSampleData() {
+    const visits = read("visits");
+    if (visits.length === 0) {
+      await addVisit({
         memberId: "self",
         date: "2026-08-08",
         time: "09:40",
@@ -125,8 +150,8 @@ const Storage = (() => {
         diagnosisMemo: "급성 인두염 소견. 신속항원 음성, CRP 정상 범위. 3일 내 열 지속되면 재방문 권유."
       });
     }
-    if (!getSymptom("2026-08-08", "self")) {
-      saveSymptom("2026-08-08", "self", {
+    if (!(await getSymptom("2026-08-08", "self"))) {
+      await saveSymptom("2026-08-08", "self", {
         hasSymptom: true,
         tags: ["인후통", "오한"],
         painLevel: 3,
@@ -134,8 +159,8 @@ const Storage = (() => {
         action: "타이레놀 1정 14:20 · 수분 1.2L"
       });
     }
-    if (!getLifeLog("2026-08-08", "self")) {
-      saveLifeLog("2026-08-08", "self", {
+    if (!(await getLifeLog("2026-08-08", "self"))) {
+      await saveLifeLog("2026-08-08", "self", {
         meals: [
           { time: "08:10", memo: "죽, 계란찜" },
           { time: "12:40", memo: "미역국, 흰밥" },
@@ -154,9 +179,10 @@ const Storage = (() => {
 
   return {
     toDateKey, escapeHtml,
+    getFamilyMembers, ensureSeedFamilyMembers,
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
     getLifeLogs, getLifeLog, saveLifeLog,
-    seedIfEmpty
+    seedSampleData
   };
 })();
