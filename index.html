@@ -43,8 +43,6 @@
         <span class="ai-search-badge">AI</span>
       </div>
       <div class="topbar-actions">
-        <button class="btn">PDF</button>
-        <button class="btn">메일 전송</button>
         <span class="avatar-badge">나</span>
       </div>
     </header>
@@ -55,7 +53,6 @@
       <div class="subtab" data-tab="visit">병원 방문</div>
       <div class="subtab" data-tab="rx">처방전</div>
       <div class="subtab" data-tab="checkup">접종 · 검진</div>
-      <div class="subtab" data-tab="photo">사진 기록</div>
       <div class="subtab" data-tab="report">통계 · 리포트</div>
       <div class="view-toggle-wrap">
         <span class="view-toggle-label">보기</span>
@@ -131,7 +128,9 @@
           </div>
         </div>
 
-        <div class="record-body">
+        <div class="upcoming-banner" id="upcomingBanner"></div>
+
+        <div class="record-body" id="recordBodyDaily">
 
           <div class="card" id="symptomCard"></div>
 
@@ -163,7 +162,7 @@
                 <span class="card-title">처방전</span>
                 <span class="card-subtitle">5일분 · 2026.08.08 – 08.12</span>
               </div>
-              <span class="card-link">약 설명 보기</span>
+              <a class="card-link" href="https://nedrug.mfds.go.kr" target="_blank" rel="noopener">약 설명 보기</a>
             </div>
             <div class="rx-table">
               <div class="rx-row head"><span>약 이름</span><span>용량</span><span>복용</span><span>비고</span></div>
@@ -183,11 +182,13 @@
           </div>
 
         </div>
+
+        <div class="record-body record-body-list" id="recordBodyList" style="display:none;"></div>
       </section>
 
       <section class="side-panel">
         <div class="card card-accent-green">
-          <div class="card-head"><span class="card-title" style="font-size:15px;">접종 · 검진</span><span class="card-link">추가</span></div>
+          <div class="card-head"><span class="card-title" style="font-size:15px;">접종 · 검진</span><span class="card-link" id="sideCheckupAddLink">추가</span></div>
           <div class="vaccine-list">
             <div class="vaccine-item"><span class="badge badge-green">필수</span><span class="vaccine-name">인플루엔자 4가</span><span class="vaccine-date">2025.10</span></div>
             <div class="vaccine-item"><span class="badge badge-green">필수</span><span class="vaccine-name">코로나19 추가접종</span><span class="vaccine-date">2025.11</span></div>
@@ -199,13 +200,7 @@
           </div>
         </div>
 
-        <div class="card photo-panel">
-          <div class="photo-head"><span class="card-title" style="font-size:15px;">병원기록지 사진</span><span class="photo-count">2장</span></div>
-          <div class="photo-grid">
-            <div class="photo-placeholder"><span>처방전 사진</span></div>
-            <div class="photo-placeholder"><span>검사결과지</span></div>
-          </div>
-          <div class="upload-dropzone">사진 끌어다 놓기 · 촬영</div>
+        <div class="card">
           <div class="link-list">
             <a class="link-item" href="https://www.nhis.or.kr" target="_blank" rel="noopener">건강검진 기록 조회<span class="arrow">↗</span></a>
             <div class="link-divider"></div>
@@ -255,15 +250,20 @@
             <button class="btn btn-primary" id="addCheckupBtn" type="button">+ 접종·검진</button>
           </div>
         </div>
+        <div class="upcoming-banner" id="checkupUpcomingBanner"></div>
         <div class="visit-list" id="checkupList"></div>
       </div>
 
       <div class="view-panel" data-view="report">
         <div class="visit-view-head">
           <div class="visit-view-title"><span class="card-title">통계 · 리포트</span></div>
-          <div class="period-toggle" id="reportPeriodToggle">
-            <button class="active" data-period="month" type="button">이번 달</button>
-            <button data-period="year" type="button">올해</button>
+          <div class="visit-view-actions">
+            <div class="period-toggle" id="reportPeriodToggle">
+              <button class="active" data-period="month" type="button">이번 달</button>
+              <button data-period="year" type="button">올해</button>
+            </div>
+            <button class="btn" id="exportPdfBtn" type="button">PDF</button>
+            <button class="btn" id="sendMailBtn" type="button">메일 전송</button>
           </div>
         </div>
         <div class="report-body" id="reportBody"></div>

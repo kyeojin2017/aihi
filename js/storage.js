@@ -96,7 +96,7 @@ const Storage = (() => {
     const now = new Date().toISOString();
     const rec = {
       id: uid(),
-      name: "", relation: "", avatarLabel: (data.name || "?").charAt(0),
+      name: "", relation: "", avatarLabel: (data.relation || data.name || "?").charAt(0),
       gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
       createdAt: now, updatedAt: now,
       ...data
@@ -111,7 +111,7 @@ const Storage = (() => {
     const idx = list.findIndex(m => m.id === id);
     if (idx === -1) return null;
     const next = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
-    if (patch.name) next.avatarLabel = patch.name.charAt(0);
+    if (patch.relation) next.avatarLabel = patch.relation.charAt(0);
     list[idx] = next;
     write("familyMembers", list);
     return list[idx];
@@ -174,17 +174,17 @@ const Storage = (() => {
     if (getFamilyMembers().length === 0) {
       write("familyMembers", [
         {
-          id: "self", name: "김하늘", relation: "본인", avatarLabel: "김",
+          id: "self", name: "김하늘", relation: "본인", avatarLabel: "본",
           gender: "female", birthDate: "1990-05-14", bloodType: "A+", heightCm: 162, weightKg: 54,
           createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         },
         {
-          id: "spouse", name: "이수진", relation: "배우자", avatarLabel: "이",
+          id: "spouse", name: "이수진", relation: "배우자", avatarLabel: "배",
           gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
           createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         },
         {
-          id: "seojun", name: "서준", relation: "자녀", avatarLabel: "서",
+          id: "seojun", name: "서준", relation: "자녀", avatarLabel: "자",
           gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
           createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         }

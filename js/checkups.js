@@ -28,6 +28,36 @@ const Checkups = (() => {
     return type === "screening" ? "건강검진" : "예방접종";
   }
 
+  function renderUpcomingBanner(all) {
+    const banner = document.getElementById("checkupUpcomingBanner");
+    if (!banner) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcoming = all
+      .filter(c => c.date)
+      .map(c => ({ ...c, days: Math.round((new Date(c.date) - today) / 86400000) }))
+      .filter(c => c.days >= 0 && c.days <= 60)
+      .sort((a, b) => a.days - b.days);
+
+    if (!upcoming.length) {
+      banner.classList.remove("show");
+      banner.innerHTML = "";
+      return;
+    }
+
+    banner.classList.add("show");
+    banner.innerHTML = `
+      <div class="upcoming-head">⚠ 다음 접종·검진 <span class="count">(${upcoming.length}건)</span></div>
+      <div class="upcoming-list">
+        ${upcoming.slice(0, 5).map(c => `
+          <div class="upcoming-item">
+            <span>${Storage.escapeHtml(c.name || "")} — ${formatDateFull(c.date)}</span>
+            <span class="dday">${c.days === 0 ? "오늘" : `D-${c.days}`}</span>
+          </div>`).join("")}
+      </div>`;
+  }
+
   function render() {
     const listEl = document.getElementById("checkupList");
     if (!listEl) return;
@@ -37,6 +67,7 @@ const Checkups = (() => {
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
     document.getElementById("checkupCount").textContent = `${all.length}건`;
+    renderUpcomingBanner(all);
 
     const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findCheckup(formMode.edit) : null) : "";
     const itemsHtml = all
@@ -147,5 +178,10 @@ const Checkups = (() => {
     }
   }
 
-  return { render, init };
+  function openAddForm() {
+    formMode = "add";
+    render();
+  }
+
+  return { render, init, openAddForm };
 })();

@@ -56,7 +56,9 @@ const Symptoms = (() => {
         <span class="field-inline">체온</span>
         <input class="field-value" id="symptomTemp" type="number" step="0.1" style="width:78px;"
           value="${rec.temperature ?? ""}" placeholder="36.5">
-        <span class="field-inline">대처</span>
+      </div>
+      <div class="symptom-row">
+        <span class="row-label">대처</span>
         <input class="field-value grow" id="symptomAction" type="text"
           value="${Storage.escapeHtml(rec.action || "")}" placeholder="복용한 약, 조치 등">
       </div>`;

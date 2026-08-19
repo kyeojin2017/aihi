@@ -117,14 +117,13 @@ function renderFamilyList() {
   const members = Storage.getFamilyMembers();
   const itemsHtml = members.map(m => `
     <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}">
-      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.name || "?").charAt(0))}</span>
-      ${Storage.escapeHtml(m.name || "이름 없음")}
+      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.relation || "?").charAt(0))}</span>
+      ${Storage.escapeHtml(m.relation || "관계 없음")}
       <span class="family-count">${countMemberRecords(m.id)}건</span>
     </div>`).join("");
 
   const addHtml = familyAddMode ? `
     <div class="family-add-form">
-      <input type="text" class="field-box" data-field="name" placeholder="이름">
       <select class="field-box" data-field="relation">
         ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
       </select>
@@ -140,7 +139,7 @@ function renderFamilyList() {
 function updateTopbarIdentity() {
   const member = Storage.getFamilyMember(AppState.memberId);
   const nameEl = document.getElementById("patientName");
-  if (nameEl) nameEl.textContent = member ? `${member.relation || "구성원"} · ${member.name || "이름 없음"}` : "";
+  if (nameEl) nameEl.textContent = member ? (member.relation || "구성원") : "";
 }
 
 function refreshFamilyIdentity() {
@@ -152,6 +151,141 @@ window.refreshFamilyIdentity = refreshFamilyIdentity;
 function renderRecordDate() {
   const d = AppState.selectedDate;
   document.getElementById("recordDate").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}요일`;
+}
+
+function formatMonthDay(dateKey) {
+  const [, m, d] = dateKey.split("-").map(Number);
+  return `${m}월 ${d}일`;
+}
+
+function computeUpcoming(memberId) {
+  const today = new Date(REAL_TODAY.getFullYear(), REAL_TODAY.getMonth(), REAL_TODAY.getDate());
+  const items = [];
+
+  Storage.getCheckups(memberId).forEach(c => {
+    if (!c.date) return;
+    const days = Math.round((new Date(c.date) - today) / 86400000);
+    if (days >= -14 && days <= 60) items.push({ label: c.name || "접종·검진", date: c.date, days });
+  });
+
+  Storage.getVisits().filter(v => v.memberId === memberId && v.nextVisitDate).forEach(v => {
+    const days = Math.round((new Date(v.nextVisitDate) - today) / 86400000);
+    if (days >= -14 && days <= 60) items.push({ label: `${v.hospital || "병원"} 다음 예약`, date: v.nextVisitDate, days });
+  });
+
+  items.sort((a, b) => a.days - b.days);
+  return items;
+}
+
+function renderUpcomingBanner() {
+  const banner = document.getElementById("upcomingBanner");
+  if (!banner) return;
+
+  const items = computeUpcoming(AppState.memberId);
+  if (!items.length) {
+    banner.classList.remove("show");
+    banner.innerHTML = "";
+    return;
+  }
+
+  banner.classList.add("show");
+  banner.innerHTML = `
+    <div class="upcoming-head">⚠ 다가오는 일정 <span class="count">(${items.length}건)</span></div>
+    <div class="upcoming-list">
+      ${items.slice(0, 5).map(it => `
+        <div class="upcoming-item">
+          <span>${Storage.escapeHtml(it.label)} — ${formatMonthDay(it.date)}</span>
+          <span class="dday${it.days < 0 ? " overdue" : ""}">${it.days < 0 ? `${-it.days}일 지남` : it.days === 0 ? "오늘" : `D-${it.days}`}</span>
+        </div>`).join("")}
+    </div>`;
+}
+
+let recordViewMode = "daily";
+
+function renderRecordList() {
+  const el = document.getElementById("recordBodyList");
+  if (!el) return;
+
+  const dateKey = Storage.toDateKey(AppState.selectedDate);
+  const memberId = AppState.memberId;
+  const rows = [];
+
+  const symptom = Storage.getSymptom(dateKey, memberId);
+  if (symptom && symptom.hasSymptom) {
+    const tagText = (symptom.tags || []).join(", ") || "증상 있음";
+    rows.push({ badge: "증상", badgeClass: "badge-neutral", text: `<strong>${Storage.escapeHtml(tagText)}</strong>${symptom.painLevel ? ` · 통증 ${symptom.painLevel}` : ""}${symptom.temperature ? ` · ${symptom.temperature}℃` : ""}` });
+  }
+
+  Storage.getVisits().filter(v => v.memberId === memberId && v.date === dateKey).forEach(v => {
+    rows.push({ badge: "병원방문", badgeClass: "badge-blue", text: `<strong>${Storage.escapeHtml(v.hospital || "병원")}</strong>${v.department ? ` · ${Storage.escapeHtml(v.department)}` : ""}${v.time ? ` · ${v.time}` : ""}` });
+  });
+
+  Storage.getPrescriptions(memberId).filter(p => p.startDate && dateKey >= p.startDate && dateKey <= (p.endDate || p.startDate)).forEach(p => {
+    const count = (p.items || []).length;
+    rows.push({ badge: "처방전", badgeClass: "badge-neutral", text: `<strong>약 ${count}종</strong>${p.items && p.items[0] ? ` · ${Storage.escapeHtml(p.items[0].drugName)} 외` : ""}` });
+  });
+
+  Storage.getCheckups(memberId).filter(c => c.date === dateKey).forEach(c => {
+    rows.push({ badge: "접종·검진", badgeClass: "badge-green", text: `<strong>${Storage.escapeHtml(c.name || "")}</strong>${c.status ? ` · ${Storage.escapeHtml(c.status)}` : ""}` });
+  });
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty-state"><p>이 날짜에는 기록이 없습니다.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = rows.map(r => `
+    <div class="record-list-item">
+      <span class="badge ${r.badgeClass}">${r.badge}</span>
+      <span class="record-list-text">${r.text}</span>
+    </div>`).join("");
+}
+
+function buildReportSummaryText() {
+  const period = document.querySelector("#reportPeriodToggle button.active")?.dataset.period || "month";
+  const today = new Date();
+  const member = Storage.getFamilyMember(AppState.memberId);
+  const summary = period === "month"
+    ? Report.computeSummary(AppState.memberId, today.getFullYear(), today.getMonth())
+    : Report.computeSummary(AppState.memberId, today.getFullYear(), null);
+  const deptRows = Report.computeDeptBreakdown(AppState.memberId, today.getFullYear());
+  const periodLabel = period === "month" ? `${today.getFullYear()}년 ${today.getMonth() + 1}월` : `${today.getFullYear()}년`;
+
+  const lines = [`${periodLabel} 통계 · 리포트 (${member ? member.relation : "구성원"})`, ""];
+  lines.push(`- 병원 방문: ${summary.visitCount}회`);
+  lines.push(`- 처방 일수: ${summary.prescriptionDays}일`);
+  lines.push(`- 증상 기록: ${summary.symptomDays}일`);
+  lines.push(`- 접종·검진: ${summary.checkupCount}건`);
+  if (deptRows.length) {
+    lines.push("", `진료과별 · ${today.getFullYear()}년`);
+    deptRows.forEach(r => lines.push(`- ${r.name}: ${r.count}회`));
+  }
+  return lines.join("\n");
+}
+
+function bindTopbarActions() {
+  document.getElementById("exportPdfBtn").addEventListener("click", () => {
+    window.print();
+  });
+
+  document.getElementById("sendMailBtn").addEventListener("click", () => {
+    const subject = "건강비서 - 통계 · 리포트";
+    const body = buildReportSummaryText();
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  });
+}
+
+function bindRecordViewToggle() {
+  document.querySelectorAll(".view-toggle button[data-view]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".view-toggle button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      recordViewMode = btn.dataset.view;
+      document.getElementById("recordBodyDaily").style.display = recordViewMode === "daily" ? "flex" : "none";
+      document.getElementById("recordBodyList").style.display = recordViewMode === "list" ? "flex" : "none";
+      if (recordViewMode === "list") renderRecordList();
+    });
+  });
 }
 
 function setView(view) {
@@ -184,7 +318,9 @@ function setView(view) {
 window.refreshAll = function refreshAll() {
   renderCalendar();
   renderRecordDate();
+  renderUpcomingBanner();
   Symptoms.render();
+  if (recordViewMode === "list") renderRecordList();
   if (currentView === "visit") Visits.render();
   if (currentView === "rx") Prescriptions.render();
   if (currentView === "checkup") Checkups.render();
@@ -315,17 +451,10 @@ function bindFamilySwitch() {
       renderFamilyList();
     } else if (action === "save-add-member") {
       const form = actionEl.closest(".family-add-form");
-      const name = form.querySelector('[data-field="name"]').value.trim();
       const relation = form.querySelector('[data-field="relation"]').value;
-      if (!name) {
-        window.alert("이름을 입력해주세요.");
-        return;
-      }
-      const member = Storage.addFamilyMember({ name, relation });
+      Storage.addFamilyMember({ relation });
       familyAddMode = false;
-      AppState.memberId = member.id;
-      AppState.visitFilterDate = null;
-      window.refreshAll();
+      renderFamilyList();
     }
   });
 }
@@ -344,6 +473,12 @@ function bindTabLinks() {
       setView(tab);
     });
   });
+
+  document.getElementById("sideCheckupAddLink").addEventListener("click", () => {
+    document.querySelectorAll(".subtab").forEach(t => t.classList.toggle("active", t.dataset.tab === "checkup"));
+    setView("checkup");
+    Checkups.openAddForm();
+  });
 }
 
 function bindExclusiveToggle(selector) {
@@ -360,6 +495,7 @@ function bindExclusiveToggle(selector) {
 Storage.seedIfEmpty();
 renderCalendar();
 renderRecordDate();
+renderUpcomingBanner();
 refreshFamilyIdentity();
 Symptoms.render();
 Visits.init();
@@ -375,4 +511,5 @@ bindSubtabs();
 bindFamilySwitch();
 bindTopNav();
 bindTabLinks();
-bindExclusiveToggle(".view-toggle");
+bindRecordViewToggle();
+bindTopbarActions();
