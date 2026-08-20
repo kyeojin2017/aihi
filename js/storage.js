@@ -128,7 +128,7 @@ const Storage = (() => {
     const rec = {
       id: uid(),
       name: "", relation: "", nickname: "",
-      avatarLabel: (data.nickname || data.relation || data.name || "?").charAt(0),
+      avatarLabel: (data.relation || data.name || "?").charAt(0),
       gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
       createdAt: now, updatedAt: now,
       ...data
@@ -143,9 +143,7 @@ const Storage = (() => {
     const idx = list.findIndex(m => m.id === id);
     if (idx === -1) return null;
     const next = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
-    if (patch.nickname) next.avatarLabel = patch.nickname.charAt(0);
-    else if (patch.nickname === "" && patch.relation) next.avatarLabel = patch.relation.charAt(0);
-    else if (patch.relation && !next.nickname) next.avatarLabel = patch.relation.charAt(0);
+    if (next.relation) next.avatarLabel = next.relation.charAt(0);
     list[idx] = next;
     write("familyMembers", list);
     return list[idx];
@@ -237,11 +235,18 @@ const Storage = (() => {
           createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         },
         {
-          id: "seojun", name: "서준", relation: "자녀", nickname: "서준", avatarLabel: "서",
+          id: "seojun", name: "서준", relation: "자녀", nickname: "서준", avatarLabel: "자",
           gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
           createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         }
       ]);
+    }
+    const existingMembers = getFamilyMembers();
+    const needsAvatarFix = existingMembers.some(m => m.relation && m.avatarLabel !== m.relation.charAt(0));
+    if (needsAvatarFix) {
+      write("familyMembers", existingMembers.map(m => (
+        m.relation ? { ...m, avatarLabel: m.relation.charAt(0) } : m
+      )));
     }
     if (conditionsStore.getAll("self").length === 0) {
       conditionsStore.add("self", { name: "알레르기성 비염", memo: "환절기에 증상이 심해짐" });

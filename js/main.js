@@ -134,7 +134,7 @@ function renderFamilyList() {
   const members = Storage.getFamilyMembers();
   const itemsHtml = members.map(m => `
     <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}">
-      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.nickname || m.relation || "?").charAt(0))}</span>
+      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.relation || m.nickname || "?").charAt(0))}</span>
       ${Storage.escapeHtml(m.nickname || m.relation || "관계 없음")}
       <span class="family-count">${countMemberRecords(m.id)}건</span>
     </div>`).join("");
