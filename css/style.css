@@ -822,7 +822,7 @@ button.stat-value.active { color: var(--primary); }
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 24px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-soft);
   margin-bottom: 12px;
@@ -1200,10 +1200,10 @@ button.metric-icon { cursor: pointer; }
 .metric-value input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .metric-unit { font-size: 13.5px; color: var(--gray-soft); flex: 0 0 auto; }
 .tone-sleep .metric-value input,
-.tone-caffeine .metric-value input { font-size: 78px; }
+.tone-caffeine .metric-value input { font-size: 39px; }
 .tone-sleep .metric-unit,
 .tone-caffeine .metric-unit,
-.tone-exercise .metric-unit { font-size: 40px; }
+.tone-exercise .metric-unit { font-size: 20px; }
 
 .type-picker {
   display: none;
@@ -1279,20 +1279,20 @@ button.metric-icon { cursor: pointer; }
 .metric-duo-display:hover { background: rgba(0,0,0,0.04); }
 .metric-duo-display-value {
   font-family: inherit;
-  font-size: 78px;
+  font-size: 39px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);
   font-variant-numeric: tabular-nums;
 }
 .metric-duo-group input {
-  width: 90px;
+  width: 60px;
   min-width: 0;
   border: none;
   background: transparent;
   padding: 0;
   font-family: inherit;
-  font-size: 78px;
+  font-size: 39px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);
