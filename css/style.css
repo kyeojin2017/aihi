@@ -1,22 +1,22 @@
 :root {
-  --bg: #F3EEE2;
-  --text: #1B1712;
-  --text-soft: #464035;
-  --primary: #5F7D64;
-  --primary-dark: #405A44;
-  --primary-tint: #E4EBE2;
+  --bg: #F3F4F9;
+  --text: #1C1E2B;
+  --text-soft: #464A5E;
+  --primary: #5B67F1;
+  --primary-dark: #3B44BE;
+  --primary-tint: #ECEBFC;
   --blue: #2C6BA8;
   --blue-dark: #1D4E7C;
   --blue-tint: #E8F0F8;
-  --gray: #5E5748;
-  --gray-soft: #6F6858;
-  --muted: #948C79;
-  --muted-soft: #ADA491;
-  --border: #E2D9C4;
-  --divider: #EFE8D8;
-  --panel-bg: #ECE5D4;
-  --page-bg: #FAF7EF;
-  --card-bg: #FFFDF7;
+  --gray: #5C5F72;
+  --gray-soft: #6E7186;
+  --muted: #9296A8;
+  --muted-soft: #AEB1C0;
+  --border: #E5E6F0;
+  --divider: #EEEFF7;
+  --panel-bg: #F1F1F9;
+  --page-bg: #F8F8FC;
+  --card-bg: #FFFFFF;
   --white: #FFFFFF;
   --purple: #7E6BB0;
   --orange: #C08A5E;
@@ -27,12 +27,7 @@
   --red-tint: #FDF4EF;
   --red-border: #F0DCCE;
   --red-text: #8A4B3A;
-  --ink: #4F6E54;
-  --ink-soft: #5F7F63;
-  --cream-text: #FBF8ED;
-  --cta: #CFE05A;
-  --cta-text: #2E3B22;
-  --font-display: "Black Han Sans", "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-display: "IBM Plex Sans KR", system-ui, sans-serif;
 }
 
 * , *::before, *::after { box-sizing: border-box; }
@@ -62,18 +57,10 @@ a:hover { color: var(--primary-dark); }
 
 /* ---- Sidebar ---- */
 .sidebar {
-  --panel-bg: var(--ink);
-  --border: #3E5B42;
-  --text: var(--cream-text);
-  --gray: #D6E0D3;
-  --muted: #9AB09C;
-  --primary-tint: rgba(207,224,90,0.28);
-  --primary-dark: var(--cta-text);
-  --white: var(--ink-soft);
   width: 238px;
   flex: 0 0 auto;
-  background: var(--panel-bg);
-  border-right: none;
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 22px 16px;
@@ -90,12 +77,12 @@ a:hover { color: var(--primary-dark); }
 .brand-mark {
   height: 40px;
   padding: 0 16px;
-  border-radius: 999px;
-  background: var(--cta);
+  border-radius: 12px;
+  background: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cta-text);
+  color: #fff;
   font-size: 19px;
   font-weight: 700;
   font-family: var(--font-display);
@@ -130,7 +117,7 @@ a:hover { color: var(--primary-dark); }
   font-weight: 600;
 }
 
-.nav-item.active .nav-dot { background: var(--cta); }
+.nav-item.active .nav-dot { background: var(--primary); }
 
 .family {
   margin-top: auto;
@@ -167,10 +154,10 @@ a:hover { color: var(--primary-dark); }
 .family-item.drag-over { border-top-color: var(--primary); }
 
 .family-item.active {
-  background: var(--white);
-  border: 1px solid var(--border);
+  background: var(--primary-tint);
+  border: 1px solid transparent;
   font-weight: 500;
-  color: var(--text);
+  color: var(--primary-dark);
 }
 
 .family-avatar {
@@ -186,10 +173,7 @@ a:hover { color: var(--primary-dark); }
   flex: 0 0 auto;
 }
 
-.family-item.active .family-avatar { background: var(--cta); color: var(--cta-text); }
-.sidebar .family-item:not(.active) .family-avatar { background: #3E5B42; color: var(--cream-text); }
-.sidebar .family-add .family-avatar { background: transparent; }
-.sidebar .nav-dot { background: #6E8F71; }
+.family-item.active .family-avatar { background: var(--primary); color: #fff; }
 
 .family-count { margin-left: auto; font-size: 11.5px; color: var(--muted-soft); }
 .family-item.active .family-count { color: var(--muted); }
@@ -328,11 +312,10 @@ a:hover { color: var(--primary-dark); }
 }
 
 .btn-primary {
-  background: var(--cta);
-  color: var(--cta-text);
-  border-color: var(--cta);
-  border-radius: 999px;
-  font-weight: 700;
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
 }
 
 .avatar-badge {
@@ -416,15 +399,12 @@ a:hover { color: var(--primary-dark); }
 .report-dept .dept-name { width: auto; min-width: 90px; }
 
 .report-narrative {
-  --panel-bg: var(--ink);
-  --border: #3E5B42;
-  --muted: #D6E0D3;
-  --text-soft: var(--cream-text);
   margin-top: 18px;
   padding: 18px 20px;
   border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
   border-radius: 14px;
-  background: var(--panel-bg);
+  background: var(--primary-tint);
 }
 .report-narrative-text { margin-top: 8px; font-size: 17px; line-height: 1.7; color: var(--text-soft); }
 .report-narrative-text p { margin: 0 0 8px; }
