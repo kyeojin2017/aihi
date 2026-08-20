@@ -1,21 +1,21 @@
 :root {
-  --bg: #E3F0E2;
-  --text: #1F2E20;
-  --text-soft: #3E4F3F;
-  --primary: #2F5233;
-  --primary-dark: #1E3721;
-  --primary-tint: #E1EEE0;
+  --bg: #E1F0F3;
+  --text: #16211F;
+  --text-soft: #3C4A47;
+  --primary: #17302D;
+  --primary-dark: #0D1E1C;
+  --primary-tint: #DCEEEB;
   --blue: #2C6BA8;
   --blue-dark: #1D4E7C;
   --blue-tint: #E8F0F8;
-  --gray: #56624F;
-  --gray-soft: #667360;
-  --muted: #8B9784;
-  --muted-soft: #A9B4A3;
-  --border: #D3E5D2;
-  --divider: #E2EFE1;
-  --panel-bg: #EAF3E9;
-  --page-bg: #F1F8F0;
+  --gray: #52625F;
+  --gray-soft: #64726F;
+  --muted: #8B9A97;
+  --muted-soft: #A9B6B3;
+  --border: #D3E6E3;
+  --divider: #E4F0EE;
+  --panel-bg: #EAF4F2;
+  --page-bg: #F3F9F8;
   --card-bg: #FFFFFF;
   --white: #FFFFFF;
   --purple: #7E6BB0;
@@ -77,7 +77,7 @@ a:hover { color: var(--primary-dark); }
 .brand-mark {
   height: 40px;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--primary);
   display: flex;
   align-items: center;
@@ -315,7 +315,7 @@ a:hover { color: var(--primary-dark); }
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
-  border-radius: 14px;
+  border-radius: 10px;
   font-weight: 600;
 }
 
@@ -400,11 +400,13 @@ a:hover { color: var(--primary-dark); }
 .report-dept .dept-name { width: auto; min-width: 90px; }
 
 .report-narrative {
+  --muted: #A9CFC9;
+  --text-soft: #EAF6F3;
   margin-top: 18px;
   padding: 18px 20px;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: var(--primary-tint);
+  background: linear-gradient(135deg, #2E6F68, #123330);
 }
 .report-narrative-text { margin-top: 8px; font-size: 17px; line-height: 1.7; color: var(--text-soft); }
 .report-narrative-text p { margin: 0 0 8px; }
