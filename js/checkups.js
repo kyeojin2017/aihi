@@ -122,7 +122,13 @@ const Checkups = (() => {
           <div class="field"><span class="field-label">이름</span><input class="field-box" type="text" data-field="name" value="${Storage.escapeHtml(c.name || "")}" placeholder="예: 인플루엔자 4가"></div>
           <div class="field"><span class="field-label">날짜</span><input class="field-box" type="date" data-field="date" value="${c.date || ""}"></div>
           <div class="field"><span class="field-label">구분</span><input class="field-box" type="text" data-field="category" value="${Storage.escapeHtml(c.category || "")}" placeholder="예: 필수 / 국가 / 개인"></div>
-          <div class="field"><span class="field-label">상태</span><input class="field-box" type="text" data-field="status" value="${Storage.escapeHtml(c.status || "")}" placeholder="예: 완료 / 예정"></div>
+          <div class="field">
+            <span class="field-label">상태</span>
+            <select class="field-box" data-field="status">
+              <option value="예정"${c.status === "예정" ? " selected" : ""}>예정</option>
+              <option value="완료"${c.status === "완료" ? " selected" : ""}>완료</option>
+            </select>
+          </div>
         </div>
         <div class="memo-row">
           <span class="memo-label">결과 메모</span>
