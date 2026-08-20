@@ -54,6 +54,36 @@ const LifeLogs = (() => {
     return value === "" ? null : Number(value);
   }
 
+  function to12Hour(h24) {
+    const h = Number(h24);
+    if (h === 0) return { period: "오전", hour: "12" };
+    if (h < 12) return { period: "오전", hour: String(h) };
+    if (h === 12) return { period: "오후", hour: "12" };
+    return { period: "오후", hour: String(h - 12) };
+  }
+
+  function parseMealTime(timeStr) {
+    if (!timeStr) return { period: "오전", hour: "", minute: "" };
+    // 내부 저장 형식: "오전|시|분" — 시/분이 비어 있어도 오전/오후 선택은 보존한다
+    const parts = timeStr.split("|");
+    if (parts.length === 3 && (parts[0] === "오전" || parts[0] === "오후")) {
+      return { period: parts[0], hour: parts[1], minute: parts[2] };
+    }
+    // 이전 자유입력 문자열("오후 12:30")이나 시드 데이터("08:10")도 인식한다
+    const m = timeStr.match(/^(오전|오후)?\s*(\d{1,2}):(\d{1,2})$/);
+    if (m) {
+      if (m[1]) return { period: m[1], hour: m[2], minute: m[3] };
+      const conv = to12Hour(m[2]);
+      return { period: conv.period, hour: conv.hour, minute: m[3] };
+    }
+    return { period: "오전", hour: "", minute: "" };
+  }
+
+  function formatMealTime(period, hour, minute) {
+    if (period === "오전" && !hour && !minute) return "";
+    return `${period}|${hour}|${minute}`;
+  }
+
   function computeNextPeriodDate(settings) {
     if (!settings || !settings.startDate) return null;
     const cycleLength = settings.cycleLength || 28;
@@ -89,11 +119,25 @@ const LifeLogs = (() => {
       else render();
       return;
     }
-    if (field === "mealTime" || field === "mealMemo") {
+    if (field === "mealMemo") {
       const idx = Number(el.dataset.index);
       const meals = (rec.meals || []).map((m, i) =>
-        i === idx ? { ...m, [field === "mealTime" ? "time" : "memo"]: el.value } : m
+        i === idx ? { ...m, memo: el.value } : m
       );
+      save({ meals });
+      return;
+    }
+    if (field === "mealHour" || field === "mealMinute") {
+      const idx = Number(el.dataset.index);
+      const digits = el.value.replace(/[^0-9]/g, "").slice(0, 2);
+      el.value = digits;
+      const meals = (rec.meals || []).map((m, i) => {
+        if (i !== idx) return m;
+        const parsed = parseMealTime(m.time);
+        const hour = field === "mealHour" ? digits : parsed.hour;
+        const minute = field === "mealMinute" ? digits : parsed.minute;
+        return { ...m, time: formatMealTime(parsed.period, hour, minute) };
+      });
       save({ meals });
       return;
     }
@@ -110,10 +154,6 @@ const LifeLogs = (() => {
     if (field === "exerciseMinutes") {
       editingExerciseMinutes = false;
       save({ exerciseMinutes: numOrNull(el.value) });
-      return;
-    }
-    if (field === "memo") {
-      save({ [field]: el.value });
       return;
     }
     save({ [field]: numOrNull(el.value) });
@@ -135,6 +175,14 @@ const LifeLogs = (() => {
       save({ waterMl: next });
     } else if (action === "toggleAlcohol") {
       save({ alcohol: !rec.alcohol });
+    } else if (action === "setMealPeriod") {
+      const idx = Number(el.dataset.index);
+      const meals = (rec.meals || []).map((m, i) => {
+        if (i !== idx) return m;
+        const parsed = parseMealTime(m.time);
+        return { ...m, time: formatMealTime(el.dataset.value, parsed.hour, parsed.minute) };
+      });
+      save({ meals });
     } else if (action === "addMinutes") {
       editingExerciseMinutes = true;
       render();
@@ -297,14 +345,26 @@ const LifeLogs = (() => {
     if (meals.length === 0) {
       return `<div class="life-empty">기록된 식사가 없습니다.</div>`;
     }
-    return meals.map((meal, i) => `
+    return meals.map((meal, i) => {
+      const t = parseMealTime(meal.time);
+      return `
       <div class="meal-row">
-        <input class="field-box meal-time" type="text" data-field="mealTime" data-index="${i}"
-          value="${Storage.escapeHtml(meal.time || "")}" placeholder="예: 오후 12:30" aria-label="식사 시간">
+        <div class="meal-time-input">
+          <div class="meal-ampm">
+            <button type="button" class="meal-ampm-btn${t.period === "오전" ? " active" : ""}" data-action="setMealPeriod" data-index="${i}" data-value="오전">오전</button>
+            <button type="button" class="meal-ampm-btn${t.period === "오후" ? " active" : ""}" data-action="setMealPeriod" data-index="${i}" data-value="오후">오후</button>
+          </div>
+          <input class="meal-hm" type="text" inputmode="numeric" maxlength="2" data-field="mealHour" data-index="${i}"
+            value="${Storage.escapeHtml(t.hour)}" placeholder="12" aria-label="식사 시">
+          <span class="meal-hm-colon">:</span>
+          <input class="meal-hm" type="text" inputmode="numeric" maxlength="2" data-field="mealMinute" data-index="${i}"
+            value="${Storage.escapeHtml(t.minute)}" placeholder="00" aria-label="식사 분">
+        </div>
         <input class="field-box" type="text" data-field="mealMemo" data-index="${i}"
           value="${Storage.escapeHtml(meal.memo || "")}" placeholder="먹은 음식">
         <button type="button" class="meal-remove" data-action="removeMeal" data-index="${i}" aria-label="식사 삭제">✕</button>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   }
 
   function renderAlcoholDetail(rec) {
@@ -402,15 +462,6 @@ const LifeLogs = (() => {
       </div>
 
       ${renderPeriodCard(rec)}
-
-      <div class="card life-card">
-        <div class="section-head">
-          <span class="section-icon tone-caffeine">${icon("status")}</span>
-          <span class="section-title">메모</span>
-        </div>
-        <textarea class="life-memo" data-field="memo"
-          placeholder="컨디션, 특이사항을 적어두세요">${Storage.escapeHtml(rec.memo || "")}</textarea>
-      </div>
 
       <div class="card life-card">
         <div class="section-head">
