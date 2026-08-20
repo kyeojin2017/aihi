@@ -184,12 +184,12 @@ function computeUpcoming(memberId) {
   Storage.getCheckups(memberId).forEach(c => {
     if (!c.date || c.status === "완료") return;
     const days = Math.round((new Date(c.date) - today) / 86400000);
-    if (days >= -14 && days <= 60) items.push({ label: c.name || "접종·검진", date: c.date, days });
+    if (days >= 0 && days <= 60) items.push({ label: c.name || "접종·검진", date: c.date, days });
   });
 
   Storage.getVisits().filter(v => v.memberId === memberId && v.nextVisitDate).forEach(v => {
     const days = Math.round((new Date(v.nextVisitDate) - today) / 86400000);
-    if (days >= -14 && days <= 60) items.push({ label: `${v.hospital || "병원"} 다음 예약`, date: v.nextVisitDate, days });
+    if (days >= 0 && days <= 60) items.push({ label: `${v.hospital || "병원"} 다음 예약`, date: v.nextVisitDate, days });
   });
 
   items.sort((a, b) => a.days - b.days);
@@ -214,7 +214,7 @@ function renderUpcomingBanner() {
       ${items.slice(0, 5).map(it => `
         <div class="upcoming-item">
           <span>${Storage.escapeHtml(it.label)} — ${formatMonthDay(it.date)}</span>
-          <span class="dday${it.days < 0 ? " overdue" : ""}">${it.days < 0 ? `${-it.days}일 지남` : it.days === 0 ? "오늘" : `D-${it.days}`}</span>
+          <span class="dday">${it.days === 0 ? "오늘" : `D-${it.days}`}</span>
         </div>`).join("")}
     </div>`;
 }
