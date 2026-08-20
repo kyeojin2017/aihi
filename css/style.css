@@ -1207,12 +1207,12 @@ button.metric-icon { cursor: pointer; }
 .metric-value input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .metric-unit { font-size: 13.5px; color: var(--gray-soft); flex: 0 0 auto; }
 .tone-sleep .metric-value input,
-.tone-caffeine .metric-value input,
-.tone-water .metric-value input { font-size: 52px; }
+.tone-caffeine .metric-value input { font-size: 52px; }
+.tone-water .metric-value input { font-size: 42px; }
 .tone-sleep .metric-unit,
 .tone-caffeine .metric-unit,
-.tone-exercise .metric-unit,
-.tone-water .metric-unit { font-size: 26px; }
+.tone-exercise .metric-unit { font-size: 26px; }
+.tone-water .metric-unit { font-size: 22px; }
 
 .type-picker {
   display: none;
