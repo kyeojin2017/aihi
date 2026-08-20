@@ -1,7 +1,6 @@
 const LifeLogs = (() => {
   const WATER_STEP = 250;
   const WATER_GOAL = 2000;
-  const TREND_DAYS = 7;
   let editingExerciseCustom = false;
   let editingExerciseDuration = false;
   let editingAlcoholCustom = false;
@@ -37,7 +36,7 @@ const LifeLogs = (() => {
     const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
       meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
       sleepHours: null, waterMl: null,
-      alcohol: false, alcoholType: "", alcoholCustomLabel: "", alcoholBottles: null, alcoholGlasses: null,
+      alcohol: false, alcoholType: "", alcoholCustomLabel: "", alcoholBottles: null, alcoholGlasses: null, alcoholFood: "",
       caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
@@ -151,6 +150,10 @@ const LifeLogs = (() => {
       save({ [field]: el.value });
       return;
     }
+    if (field === "alcoholFood") {
+      save({ [field]: el.value });
+      return;
+    }
     if (field === "exerciseHours" || field === "exerciseMinutes") {
       editingExerciseDuration = false;
       save({ [field]: numOrNull(el.value) });
@@ -220,43 +223,36 @@ const LifeLogs = (() => {
     }
   }
 
-  function trendData(dateKey, logs) {
+  function sleepAverage(dateKey, logs, days) {
     const [y, m, d] = dateKey.split("-").map(Number);
     const end = new Date(y, m - 1, d);
-    const days = [];
-    for (let i = TREND_DAYS - 1; i >= 0; i--) {
+    let sum = 0;
+    let count = 0;
+    for (let i = 0; i < days; i++) {
       const day = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i);
       const key = Storage.toDateKey(day);
       const log = logs.find(l => l.date === key && l.memberId === AppState.memberId);
-      days.push({ key, day, sleepHours: log && log.sleepHours != null ? log.sleepHours : null });
+      if (log && log.sleepHours != null) { sum += log.sleepHours; count += 1; }
     }
-    return days;
+    return { avg: count ? sum / count : null, count };
   }
 
-  function renderTrend(dateKey, logs) {
-    const days = trendData(dateKey, logs);
-    const recorded = days.filter(d => d.sleepHours != null);
-    if (recorded.length === 0) {
-      return `<div class="life-empty">아직 수면 기록이 없습니다. 수면 시간을 입력하면 여기에 추이가 쌓입니다.</div>`;
-    }
-    const max = Math.max(9, ...recorded.map(d => d.sleepHours));
-    const avg = recorded.reduce((sum, d) => sum + d.sleepHours, 0) / recorded.length;
-
+  function renderSleepAverages(dateKey, logs) {
+    const week = sleepAverage(dateKey, logs, 7);
+    const month = sleepAverage(dateKey, logs, 30);
+    const box = (label, sub, data) => `
+      <div class="card life-card sleep-avg-card">
+        <div class="sleep-avg-label"><span class="section-icon tone-sleep">${icon("trend")}</span>${label}</div>
+        ${data.avg != null
+          ? `<div class="sleep-avg-value">${data.avg.toFixed(1)}<span class="stat-unit">시간</span></div>
+             <div class="sleep-avg-sub">기록 ${data.count}일 · ${sub}</div>`
+          : `<div class="life-empty">기록 없음</div>`}
+      </div>`;
     return `
-      <div class="trend-bars">
-        ${days.map(d => {
-          const has = d.sleepHours != null;
-          const pct = has ? Math.round((d.sleepHours / max) * 100) : 0;
-          const selected = d.key === dateKey;
-          return `
-            <div class="trend-col${selected ? " selected" : ""}">
-              <span class="trend-value">${has ? d.sleepHours : "·"}</span>
-              <span class="trend-track"><span class="trend-fill" style="height:${pct}%;"></span></span>
-              <span class="trend-day">${d.day.getDate()}</span>
-            </div>`;
-        }).join("")}
-      </div>
-      <div class="trend-note">기록한 ${recorded.length}일 평균 <strong>${avg.toFixed(1)}시간</strong></div>`;
+      <div class="sleep-avg-grid">
+        ${box("주간 평균 수면", "최근 7일", week)}
+        ${box("월간 평균 수면", "최근 30일", month)}
+      </div>`;
   }
 
   function metricTile({ tone, name, label, unit, value, field, step, min, max, extra }) {
@@ -388,6 +384,10 @@ const LifeLogs = (() => {
           <div class="field"><span class="field-label">병</span><input class="field-box" type="number" min="0" step="1" data-field="alcoholBottles" value="${rec.alcoholBottles ?? ""}" placeholder="0"></div>
           <div class="field"><span class="field-label">잔</span><input class="field-box" type="number" min="0" step="1" data-field="alcoholGlasses" value="${rec.alcoholGlasses ?? ""}" placeholder="0"></div>
         </div>
+        <div class="field alcohol-food-field">
+          <span class="field-label">함께 먹은 음식</span>
+          <input class="field-box" type="text" data-field="alcoholFood" value="${Storage.escapeHtml(rec.alcoholFood || "")}" placeholder="예: 삼겹살, 골뱅이무침">
+        </div>
       </div>`;
   }
 
@@ -467,14 +467,7 @@ const LifeLogs = (() => {
 
       ${renderPeriodCard(rec)}
 
-      <div class="card life-card">
-        <div class="section-head">
-          <span class="section-icon tone-sleep">${icon("trend")}</span>
-          <span class="section-title">수면 추이</span>
-          <span class="section-count">최근 7일</span>
-        </div>
-        <div class="trend">${renderTrend(dateKey, allLogs)}</div>
-      </div>
+      ${renderSleepAverages(dateKey, allLogs)}
     `;
   }
 

@@ -95,27 +95,15 @@ function renderCalendar() {
   renderSummaryPanel();
 }
 
-const DEPT_COLORS = ["#2C6BA8", "#3E8FA8", "#7E6BB0", "#C08A5E", "#5B9E7E"];
-
 function renderSummaryPanel() {
   const { year, month } = calendarState;
   const summary = Report.computeSummary(AppState.memberId, year, month);
-  const deptRows = Report.computeDeptBreakdown(AppState.memberId, year);
 
   document.getElementById("monthlySummaryTitle").textContent = `${month + 1}월 누계`;
   document.getElementById("calStatVisit").innerHTML = `${summary.visitCount}<span class="stat-unit">회</span>`;
-  document.getElementById("calStatRx").innerHTML = `${summary.prescriptionDays}<span class="stat-unit">일</span>`;
+  document.getElementById("calStatRx").innerHTML = `${summary.prescriptionCount}<span class="stat-unit">회</span>`;
   document.getElementById("calStatSymptom").innerHTML = `${summary.symptomDays}<span class="stat-unit">일</span>`;
   document.getElementById("calStatCheckup").innerHTML = `${summary.checkupCount}<span class="stat-unit">건</span>`;
-
-  document.getElementById("calendarDeptTitle").textContent = `진료과별 · ${year}년`;
-  const deptList = document.getElementById("calendarDeptList");
-  deptList.innerHTML = deptRows.length ? deptRows.map((r, i) => `
-    <div class="dept-row">
-      <span class="dept-name">${Storage.escapeHtml(r.name)}</span>
-      <span class="dept-bar"><span class="dept-bar-fill" style="width:${r.pct}%; background:${DEPT_COLORS[i % DEPT_COLORS.length]};"></span></span>
-      <span class="dept-count">${r.count}</span>
-    </div>`).join("") : `<div class="symptom-hint">${year}년 병원 방문 기록이 없습니다.</div>`;
 }
 
 let familyAddMode = false;
@@ -179,6 +167,11 @@ function renderRecordDate() {
 function formatMonthDay(dateKey) {
   const [, m, d] = dateKey.split("-").map(Number);
   return `${m}월 ${d}일`;
+}
+
+function formatYearMonthDay(dateKey) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return `${y}년 ${m}월 ${d}일`;
 }
 
 function computeUpcoming(memberId) {
@@ -390,7 +383,7 @@ function buildReportSummaryText() {
 
   const lines = [`${periodLabel} 통계 · 리포트 (${member ? member.relation : "구성원"})`, ""];
   lines.push(`- 병원 방문: ${summary.visitCount}회`);
-  lines.push(`- 처방 일수: ${summary.prescriptionDays}일`);
+  lines.push(`- 처방 횟수: ${summary.prescriptionCount}회`);
   lines.push(`- 증상 기록: ${summary.symptomDays}일`);
   lines.push(`- 접종·검진: ${summary.checkupCount}건`);
   if (deptRows.length) {
@@ -467,7 +460,7 @@ function renderSearchResults(query) {
       <div class="ai-search-item" data-type="${r.type}" data-date="${r.date || ""}">
         <span class="badge ${badgeClass}">${label}</span>
         <span class="ai-search-item-text">${r.text}</span>
-        <span class="ai-search-item-date">${r.date ? formatMonthDay(r.date) : ""}</span>
+        <span class="ai-search-item-date">${r.date ? formatYearMonthDay(r.date) : ""}</span>
       </div>`;
   }).join("");
 }

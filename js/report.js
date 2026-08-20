@@ -1,11 +1,19 @@
 const Report = (() => {
   let period = "month"; // "month" | "year"
+  let activeDetail = null; // null | "visit" | "rx" | "symptom" | "checkup"
 
   function init() {
     document.getElementById("reportPeriodToggle").addEventListener("click", e => {
       const btn = e.target.closest("button[data-period]");
       if (!btn) return;
       period = btn.dataset.period;
+      activeDetail = null;
+      render();
+    });
+    document.getElementById("reportBody").addEventListener("click", e => {
+      const el = e.target.closest("[data-action='toggleDetail']");
+      if (!el) return;
+      activeDetail = activeDetail === el.dataset.stat ? null : el.dataset.stat;
       render();
     });
   }
@@ -17,39 +25,41 @@ const Report = (() => {
     return diff > 0 ? diff : 0;
   }
 
-  function computeSummary(memberId, year, month) {
+  function getRange(year, month) {
     const rangeStart = month === null ? new Date(year, 0, 1) : new Date(year, month, 1);
     const rangeEnd = month === null ? new Date(year, 11, 31) : new Date(year, month + 1, 0);
+    return { rangeStart, rangeEnd };
+  }
+
+  function inRangeFn(rangeStart, rangeEnd) {
+    return dateKey => {
+      if (!dateKey) return false;
+      const d = new Date(dateKey);
+      return d >= rangeStart && d <= rangeEnd;
+    };
+  }
+
+  function computeSummary(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
 
     const visits = Storage.getVisits().filter(v => v.memberId === memberId && v.date);
     const symptoms = Storage.getSymptoms().filter(s => s.memberId === memberId);
     const prescriptions = Storage.getPrescriptions(memberId);
     const checkups = Storage.getCheckups(memberId);
 
-    const inRange = dateKey => {
-      if (!dateKey) return false;
-      const d = new Date(dateKey);
-      return d >= rangeStart && d <= rangeEnd;
-    };
-
     const visitCount = visits.filter(v => inRange(v.date)).length;
-
-    const prescriptionDays = prescriptions.reduce((sum, p) => {
-      if (!p.startDate) return sum;
-      const start = new Date(p.startDate);
-      const end = p.endDate ? new Date(p.endDate) : start;
-      return sum + daysOverlap(start, end, rangeStart, rangeEnd);
-    }, 0);
-
+    const prescriptionCount = prescriptions.filter(p => inRange(p.startDate)).length;
     const symptomDays = symptoms.filter(s => s.hasSymptom && inRange(s.date)).length;
     const checkupCount = checkups.filter(c => inRange(c.date)).length;
 
-    return { visitCount, prescriptionDays, symptomDays, checkupCount };
+    return { visitCount, prescriptionCount, symptomDays, checkupCount };
   }
 
-  function computeDeptBreakdown(memberId, year) {
-    const visits = Storage.getVisits().filter(v =>
-      v.memberId === memberId && v.date && v.date.startsWith(`${year}-`) && v.department);
+  function computeDeptBreakdown(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month == null ? null : month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    const visits = Storage.getVisits().filter(v => v.memberId === memberId && v.department && inRange(v.date));
     const counts = {};
     visits.forEach(v => { counts[v.department] = (counts[v.department] || 0) + 1; });
     const rows = Object.entries(counts).map(([name, count]) => ({ name, count }));
@@ -58,7 +68,137 @@ const Report = (() => {
     return rows.map(r => ({ ...r, pct: max ? Math.round((r.count / max) * 100) : 0 }));
   }
 
+  function computeVisitList(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    return Storage.getVisits()
+      .filter(v => v.memberId === memberId && inRange(v.date))
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .map(v => ({ date: v.date, hospital: v.hospital || "-", department: v.department || "" }));
+  }
+
+  function computePrescriptionList(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    return Storage.getPrescriptions(memberId)
+      .filter(p => inRange(p.startDate))
+      .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""))
+      .map(p => ({
+        date: p.startDate,
+        drugNames: (p.items || []).map(it => it.drugName).filter(Boolean).join(", ") || "-"
+      }));
+  }
+
+  function computeSymptomBreakdown(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    const symptoms = Storage.getSymptoms().filter(s => s.memberId === memberId && s.hasSymptom && inRange(s.date));
+    const tagCounts = {};
+    let painSum = 0;
+    let painCount = 0;
+    symptoms.forEach(s => {
+      (s.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; });
+      if (s.painLevel != null) { painSum += s.painLevel; painCount += 1; }
+    });
+    const tagRows = Object.entries(tagCounts).map(([name, count]) => ({ name, count }));
+    tagRows.sort((a, b) => b.count - a.count);
+    const max = tagRows.length ? tagRows[0].count : 0;
+    return {
+      totalDays: symptoms.length,
+      avgPain: painCount ? Math.round((painSum / painCount) * 10) / 10 : null,
+      tagRows: tagRows.map(r => ({ ...r, pct: max ? Math.round((r.count / max) * 100) : 0 }))
+    };
+  }
+
+  function computeCheckupList(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    return Storage.getCheckups(memberId)
+      .filter(c => inRange(c.date))
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .map(c => ({
+        name: c.name || "-",
+        date: c.date,
+        type: c.type === "vaccine" ? "예방접종" : "검진",
+        category: c.category || ""
+      }));
+  }
+
   const DEPT_COLORS = ["#2C6BA8", "#3E8FA8", "#7E6BB0", "#C08A5E", "#5B9E7E"];
+
+  function formatMonthDay(dateKey) {
+    if (!dateKey) return "-";
+    const [, m, d] = dateKey.split("-").map(Number);
+    return `${m}월 ${d}일`;
+  }
+
+  function renderDeptDetail(memberId, year, month) {
+    const rows = computeDeptBreakdown(memberId, year, month);
+    const visits = computeVisitList(memberId, year, month);
+    return `
+      <div class="dept-breakdown report-detail">
+        <div class="dept-title">진료과별 방문 횟수</div>
+        <div class="dept-list">
+          ${rows.length ? rows.map((r, i) => `
+            <div class="dept-row">
+              <span class="dept-name">${Storage.escapeHtml(r.name)}</span>
+              <span class="dept-bar"><span class="dept-bar-fill" style="width:${r.pct}%; background:${DEPT_COLORS[i % DEPT_COLORS.length]};"></span></span>
+              <span class="dept-count">${r.count}</span>
+            </div>`).join("") : `<div class="symptom-hint">방문 기록이 없습니다.</div>`}
+        </div>
+      </div>
+      <div class="report-detail">
+        <div class="dept-title">방문 날짜 · 병원</div>
+        ${visits.length ? `
+        <div class="report-detail-list">
+          ${visits.map(v => `<div class="report-detail-row"><span class="report-detail-date">${Storage.escapeHtml(formatMonthDay(v.date))}</span><span class="report-detail-text">${Storage.escapeHtml(v.hospital)}${v.department ? ` <span class="report-detail-tag">${Storage.escapeHtml(v.department)}</span>` : ""}</span></div>`).join("")}
+        </div>` : `<div class="symptom-hint">방문 기록이 없습니다.</div>`}
+      </div>`;
+  }
+
+  function renderRxDetail(memberId, year, month) {
+    const rows = computePrescriptionList(memberId, year, month);
+    return `
+      <div class="report-detail">
+        <div class="dept-title">처방받은 날짜</div>
+        ${rows.length ? `
+        <div class="report-detail-list">
+          ${rows.map(r => `<div class="report-detail-row"><span class="report-detail-date">${Storage.escapeHtml(formatMonthDay(r.date))}</span><span class="report-detail-text">${Storage.escapeHtml(r.drugNames)}</span></div>`).join("")}
+        </div>` : `<div class="symptom-hint">처방 기록이 없습니다.</div>`}
+      </div>`;
+  }
+
+  function renderSymptomDetail(memberId, year, month) {
+    const s = computeSymptomBreakdown(memberId, year, month);
+    return `
+      <div class="report-detail">
+        <div class="dept-title">증상 통계${s.avgPain != null ? ` · 평균 통증 ${s.avgPain}` : ""}</div>
+        ${s.tagRows.length ? `
+        <div class="report-detail-list">
+          ${s.tagRows.map(r => `<div class="report-detail-row"><span class="report-detail-text">${Storage.escapeHtml(r.name)}</span><span class="report-detail-count">${r.count}회</span></div>`).join("")}
+        </div>` : `<div class="symptom-hint">증상 기록이 없습니다.</div>`}
+      </div>`;
+  }
+
+  function renderCheckupDetail(memberId, year, month) {
+    const rows = computeCheckupList(memberId, year, month);
+    return `
+      <div class="report-detail">
+        <div class="dept-title">접종 · 검진 내역</div>
+        ${rows.length ? `
+        <div class="report-detail-list">
+          ${rows.map(r => `<div class="report-detail-row"><span class="report-detail-date">${Storage.escapeHtml(formatMonthDay(r.date))}</span><span class="report-detail-text">${Storage.escapeHtml(r.name)} <span class="report-detail-tag">${Storage.escapeHtml(r.type)}</span></span></div>`).join("")}
+        </div>` : `<div class="symptom-hint">접종·검진 기록이 없습니다.</div>`}
+      </div>`;
+  }
+
+  function renderDetail(memberId, year, month) {
+    if (activeDetail === "visit") return renderDeptDetail(memberId, year, month);
+    if (activeDetail === "rx") return renderRxDetail(memberId, year, month);
+    if (activeDetail === "symptom") return renderSymptomDetail(memberId, year, month);
+    if (activeDetail === "checkup") return renderCheckupDetail(memberId, year, month);
+    return "";
+  }
 
   function render() {
     const el = document.getElementById("reportBody");
@@ -66,11 +206,10 @@ const Report = (() => {
 
     const today = new Date();
     const memberId = AppState.memberId;
-    const summary = period === "month"
-      ? computeSummary(memberId, today.getFullYear(), today.getMonth())
-      : computeSummary(memberId, today.getFullYear(), null);
-    const deptRows = computeDeptBreakdown(memberId, today.getFullYear());
-    const periodLabel = period === "month" ? `${today.getMonth() + 1}월` : `${today.getFullYear()}년`;
+    const year = today.getFullYear();
+    const month = period === "month" ? today.getMonth() : null;
+    const summary = computeSummary(memberId, year, month);
+    const periodLabel = period === "month" ? `${month + 1}월` : `${year}년`;
 
     document.querySelectorAll("#reportPeriodToggle button").forEach(b => {
       b.classList.toggle("active", b.dataset.period === period);
@@ -80,23 +219,13 @@ const Report = (() => {
       <div class="report-summary">
         <div class="monthly-summary-head"><span class="title">${Storage.escapeHtml(periodLabel)} 누계</span></div>
         <div class="stats-grid">
-          <div class="stat-card"><span class="stat-label">병원 방문</span><span class="stat-value">${summary.visitCount}<span class="stat-unit">회</span></span></div>
-          <div class="stat-card"><span class="stat-label">처방 일수</span><span class="stat-value">${summary.prescriptionDays}<span class="stat-unit">일</span></span></div>
-          <div class="stat-card"><span class="stat-label">증상 기록</span><span class="stat-value">${summary.symptomDays}<span class="stat-unit">일</span></span></div>
-          <div class="stat-card"><span class="stat-label">접종 · 검진</span><span class="stat-value">${summary.checkupCount}<span class="stat-unit">건</span></span></div>
+          <div class="stat-card"><span class="stat-label">병원 방문</span><button type="button" class="stat-value${activeDetail === "visit" ? " active" : ""}" data-action="toggleDetail" data-stat="visit">${summary.visitCount}<span class="stat-unit">회</span></button></div>
+          <div class="stat-card"><span class="stat-label">처방 횟수</span><button type="button" class="stat-value${activeDetail === "rx" ? " active" : ""}" data-action="toggleDetail" data-stat="rx">${summary.prescriptionCount}<span class="stat-unit">회</span></button></div>
+          <div class="stat-card"><span class="stat-label">증상 기록</span><button type="button" class="stat-value${activeDetail === "symptom" ? " active" : ""}" data-action="toggleDetail" data-stat="symptom">${summary.symptomDays}<span class="stat-unit">일</span></button></div>
+          <div class="stat-card"><span class="stat-label">접종 · 검진</span><button type="button" class="stat-value${activeDetail === "checkup" ? " active" : ""}" data-action="toggleDetail" data-stat="checkup">${summary.checkupCount}<span class="stat-unit">건</span></button></div>
         </div>
       </div>
-      <div class="dept-breakdown report-dept">
-        <div class="dept-title">진료과별 · ${today.getFullYear()}년</div>
-        <div class="dept-list">
-          ${deptRows.length ? deptRows.map((r, i) => `
-            <div class="dept-row">
-              <span class="dept-name">${Storage.escapeHtml(r.name)}</span>
-              <span class="dept-bar"><span class="dept-bar-fill" style="width:${r.pct}%; background:${DEPT_COLORS[i % DEPT_COLORS.length]};"></span></span>
-              <span class="dept-count">${r.count}</span>
-            </div>`).join("") : `<div class="symptom-hint">올해 병원 방문 기록이 없습니다.</div>`}
-        </div>
-      </div>`;
+      ${renderDetail(memberId, year, month)}`;
   }
 
   return { render, init, computeSummary, computeDeptBreakdown };
