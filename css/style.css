@@ -1,21 +1,21 @@
 :root {
-  --bg: #FBEDEF;
-  --text: #4A2E35;
-  --text-soft: #6B4750;
-  --primary: #EFA0BB;
-  --primary-dark: #C96E92;
-  --primary-tint: #FCE7EE;
+  --bg: #E3F0E2;
+  --text: #1F2E20;
+  --text-soft: #3E4F3F;
+  --primary: #2F5233;
+  --primary-dark: #1E3721;
+  --primary-tint: #E1EEE0;
   --blue: #2C6BA8;
   --blue-dark: #1D4E7C;
   --blue-tint: #E8F0F8;
-  --gray: #82616A;
-  --gray-soft: #8E6F77;
-  --muted: #AC8A91;
-  --muted-soft: #C4A7AD;
-  --border: #F3D9DE;
-  --divider: #F8E6EA;
-  --panel-bg: #F7DEE2;
-  --page-bg: #FDF3F0;
+  --gray: #56624F;
+  --gray-soft: #667360;
+  --muted: #8B9784;
+  --muted-soft: #A9B4A3;
+  --border: #D3E5D2;
+  --divider: #E2EFE1;
+  --panel-bg: #EAF3E9;
+  --page-bg: #F1F8F0;
   --card-bg: #FFFFFF;
   --white: #FFFFFF;
   --purple: #7E6BB0;
@@ -77,7 +77,7 @@ a:hover { color: var(--primary-dark); }
 .brand-mark {
   height: 40px;
   padding: 0 16px;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--primary);
   display: flex;
   align-items: center;
@@ -315,7 +315,7 @@ a:hover { color: var(--primary-dark); }
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
-  border-radius: 999px;
+  border-radius: 14px;
   font-weight: 600;
 }
 
