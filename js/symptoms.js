@@ -36,7 +36,7 @@ const Symptoms = (() => {
         <div class="symptom-row">
           <span class="row-label">메모</span>
           <input class="field-value grow" id="symptomAction" type="text"
-            value="${Storage.escapeHtml(rec.action || "")}" placeholder="통증 부위, 대처 등을 기록하세요">
+            value="${Storage.escapeHtml(rec.action || "")}" placeholder="컨디션이나 기분을 입력해 보세요">
         </div>`;
     }
     const availableTags = Array.from(new Set([...PRESET_TAGS, ...(rec.tags || [])]));
