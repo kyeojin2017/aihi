@@ -184,6 +184,8 @@ const LifeLogs = (() => {
   function exerciseTile(rec) {
     const isCustom = rec.exerciseType === "기타";
     const typeLabel = isCustom && rec.exerciseCustomLabel ? rec.exerciseCustomLabel : rec.exerciseType;
+    const showCustomInput = isCustom && !rec.exerciseCustomLabel;
+    const showMinutes = !(rec.exerciseHours > 0 && !rec.exerciseMinutes);
     return `
       <div class="metric tone-exercise metric-compact">
         <div class="metric-head-row">
@@ -195,16 +197,17 @@ const LifeLogs = (() => {
           </div>
         </div>
         <span class="metric-label">운동${typeLabel ? `<span class="metric-type-tag">${Storage.escapeHtml(typeLabel)}</span>` : ""}</span>
-        ${isCustom ? `<input type="text" class="metric-custom-input" data-field="exerciseCustomLabel" value="${Storage.escapeHtml(rec.exerciseCustomLabel || "")}" placeholder="운동 이름 입력">` : ""}
+        ${showCustomInput ? `<input type="text" class="metric-custom-input" data-field="exerciseCustomLabel" value="${Storage.escapeHtml(rec.exerciseCustomLabel || "")}" placeholder="운동 이름 입력">` : ""}
         <span class="metric-duo">
           <span class="metric-duo-group">
             <input type="number" data-field="exerciseHours" value="${rec.exerciseHours ?? ""}" placeholder="0" step="1" min="0" aria-label="운동 시간">
             <span class="metric-unit">시간</span>
           </span>
+          ${showMinutes ? `
           <span class="metric-duo-group">
             <input type="number" data-field="exerciseMinutes" value="${rec.exerciseMinutes ?? ""}" placeholder="0" step="5" min="0" max="59" aria-label="운동 분">
             <span class="metric-unit">분</span>
-          </span>
+          </span>` : ""}
         </span>
       </div>`;
   }

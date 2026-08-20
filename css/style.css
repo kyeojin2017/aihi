@@ -970,7 +970,7 @@ button.metric-icon { cursor: pointer; }
 .metric-type-tag { font-size: 11px; font-weight: 500; color: var(--tone); }
 
 /* 값은 타일 아래쪽에 붙여 나란히 읽히게 한다 */
-.metric-value { margin-top: auto; display: flex; align-items: baseline; gap: 5px; }
+.metric-value { margin-top: auto; display: flex; align-items: baseline; gap: 8px; }
 .metric-value input {
   width: 100%;
   min-width: 0;
@@ -978,7 +978,7 @@ button.metric-icon { cursor: pointer; }
   background: transparent;
   padding: 0;
   font-family: inherit;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);
@@ -990,7 +990,7 @@ button.metric-icon { cursor: pointer; }
 .metric-value input::-webkit-outer-spin-button,
 .metric-value input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .metric-value input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
-.metric-unit { font-size: 12px; color: var(--gray-soft); flex: 0 0 auto; }
+.metric-unit { font-size: 13.5px; color: var(--gray-soft); flex: 0 0 auto; }
 
 .type-picker {
   display: none;
@@ -1054,16 +1054,16 @@ button.metric-icon { cursor: pointer; }
 }
 .metric-type-select:focus { outline: 2px solid var(--tone); outline-offset: -1px; }
 
-.metric-duo { margin-top: auto; display: flex; align-items: baseline; gap: 14px; }
-.metric-duo-group { display: flex; align-items: baseline; gap: 4px; }
+.metric-duo { margin-top: auto; display: flex; align-items: baseline; justify-content: flex-end; gap: 14px; }
+.metric-duo-group { display: flex; align-items: baseline; gap: 7px; }
 .metric-duo-group input {
-  width: 30px;
+  width: 34px;
   min-width: 0;
   border: none;
   background: transparent;
   padding: 0;
   font-family: inherit;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);
