@@ -1260,8 +1260,8 @@ button.metric-icon { cursor: pointer; }
 
 .metric-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .metric-intensity-inline { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.metric-intensity-label { font-size: 10.5px; color: var(--gray-soft); white-space: nowrap; margin-right: 2px; }
-.metric-intensity-inline .type-chip.mini { padding: 3px 7px; font-size: 11px; }
+.metric-intensity-label { font-size: 13px; color: var(--gray-soft); white-space: nowrap; margin-right: 2px; }
+.metric-intensity-inline .type-chip.mini { padding: 3px 8px; font-size: 13px; }
 
 .metric-type-select {
   width: 100%;
