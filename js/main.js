@@ -6,12 +6,15 @@ const REAL_TODAY = new Date();
 window.AppState = {
   selectedDate: new Date(REAL_TODAY),
   memberId: "self",
-  visitFilterDate: null
+  visitFilterDate: null,
+  visitFilterMonth: null,
+  rxFilterMonth: null
 };
 
 let currentView = "today";
 let currentSection = "diary";
 const calendarState = { year: REAL_TODAY.getFullYear(), month: REAL_TODAY.getMonth() };
+window.calendarState = calendarState;
 const SECTION_LABEL = { diary: "건강일기", profile: "개인정보", biorhythm: "생활 바이오리듬" };
 
 function pad2(n) { return String(n).padStart(2, "0"); }
@@ -362,24 +365,32 @@ function bindTodayRecordActions() {
   document.getElementById("todayVisitBody").addEventListener("click", e => {
     const el = e.target.closest("[data-action='goVisitTab']");
     if (!el) return;
-    if (el.dataset.date) AppState.visitFilterDate = el.dataset.date;
+    if (el.dataset.date) {
+      AppState.visitFilterDate = el.dataset.date;
+      AppState.visitFilterMonth = null;
+    } else {
+      AppState.visitFilterDate = null;
+      AppState.visitFilterMonth = Storage.toDateKey(AppState.selectedDate).slice(0, 7);
+    }
     goToTab("visit");
   });
   document.getElementById("todayRxBody").addEventListener("click", e => {
     if (!e.target.closest("[data-action='goRxTab']")) return;
+    AppState.rxFilterMonth = Storage.toDateKey(AppState.selectedDate).slice(0, 7);
     goToTab("rx");
   });
 }
 
 function buildReportSummaryText() {
   const period = document.querySelector("#reportPeriodToggle button.active")?.dataset.period || "month";
-  const today = new Date();
+  const year = calendarState.year;
+  const month = calendarState.month;
   const member = Storage.getFamilyMember(AppState.memberId);
   const summary = period === "month"
-    ? Report.computeSummary(AppState.memberId, today.getFullYear(), today.getMonth())
-    : Report.computeSummary(AppState.memberId, today.getFullYear(), null);
-  const deptRows = Report.computeDeptBreakdown(AppState.memberId, today.getFullYear());
-  const periodLabel = period === "month" ? `${today.getFullYear()}년 ${today.getMonth() + 1}월` : `${today.getFullYear()}년`;
+    ? Report.computeSummary(AppState.memberId, year, month)
+    : Report.computeSummary(AppState.memberId, year, null);
+  const deptRows = Report.computeDeptBreakdown(AppState.memberId, year);
+  const periodLabel = period === "month" ? `${year}년 ${month + 1}월` : `${year}년`;
 
   const lines = [`${periodLabel} 통계 · 리포트 (${member ? member.relation : "구성원"})`, ""];
   lines.push(`- 병원 방문: ${summary.visitCount}회`);

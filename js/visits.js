@@ -8,6 +8,7 @@ const Visits = (() => {
     });
     document.getElementById("visitFilterClear").addEventListener("click", () => {
       AppState.visitFilterDate = null;
+      AppState.visitFilterMonth = null;
       render();
     });
     document.getElementById("visitList").addEventListener("click", onListClick);
@@ -59,7 +60,9 @@ const Visits = (() => {
     if (!listEl) return;
 
     const all = Storage.getVisits().filter(v => v.memberId === AppState.memberId);
-    const filtered = AppState.visitFilterDate ? all.filter(v => v.date === AppState.visitFilterDate) : all;
+    let filtered = all;
+    if (AppState.visitFilterDate) filtered = all.filter(v => v.date === AppState.visitFilterDate);
+    else if (AppState.visitFilterMonth) filtered = all.filter(v => (v.date || "").startsWith(AppState.visitFilterMonth));
     const sorted = filtered.slice().sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
 
     document.getElementById("visitCount").textContent = `${all.length}건`;
@@ -68,6 +71,9 @@ const Visits = (() => {
     if (AppState.visitFilterDate) {
       filterChip.style.display = "flex";
       document.getElementById("visitFilterLabel").textContent = `${formatDateLabel(AppState.visitFilterDate)} 기록만 보는 중`;
+    } else if (AppState.visitFilterMonth) {
+      filterChip.style.display = "flex";
+      document.getElementById("visitFilterLabel").textContent = `${formatMonthLabel(AppState.visitFilterMonth)} 기록만 보는 중`;
     } else {
       filterChip.style.display = "none";
     }
@@ -79,7 +85,10 @@ const Visits = (() => {
       .join("");
 
     if (!formHtml && sorted.length === 0) {
-      listEl.innerHTML = `<div class="empty-state"><p>${AppState.visitFilterDate ? "이 날짜에 병원 방문 기록이 없습니다." : "아직 병원 방문 기록이 없습니다."}</p></div>`;
+      const emptyMsg = AppState.visitFilterDate ? "이 날짜에 병원 방문 기록이 없습니다."
+        : AppState.visitFilterMonth ? "이 달에 병원 방문 기록이 없습니다."
+        : "아직 병원 방문 기록이 없습니다.";
+      listEl.innerHTML = `<div class="empty-state"><p>${emptyMsg}</p></div>`;
     } else {
       listEl.innerHTML = formHtml + itemsHtml;
     }
@@ -92,6 +101,11 @@ const Visits = (() => {
   function formatDateLabel(dateKey) {
     const [, m, d] = dateKey.split("-").map(Number);
     return `${m}월 ${d}일`;
+  }
+
+  function formatMonthLabel(monthKey) {
+    const [y, m] = monthKey.split("-").map(Number);
+    return `${y}년 ${m}월`;
   }
 
   function formatDateFull(dateKey) {

@@ -124,8 +124,6 @@ const Report = (() => {
       }));
   }
 
-  const DEPT_COLORS = ["#2C6BA8", "#3E8FA8", "#7E6BB0", "#C08A5E", "#5B9E7E"];
-
   function formatMonthDay(dateKey) {
     if (!dateKey) return "-";
     const [, m, d] = dateKey.split("-").map(Number);
@@ -136,16 +134,12 @@ const Report = (() => {
     const rows = computeDeptBreakdown(memberId, year, month);
     const visits = computeVisitList(memberId, year, month);
     return `
-      <div class="dept-breakdown report-detail">
+      <div class="report-detail">
         <div class="dept-title">진료과별 방문 횟수</div>
-        <div class="dept-list">
-          ${rows.length ? rows.map((r, i) => `
-            <div class="dept-row">
-              <span class="dept-name">${Storage.escapeHtml(r.name)}</span>
-              <span class="dept-bar"><span class="dept-bar-fill" style="width:${r.pct}%; background:${DEPT_COLORS[i % DEPT_COLORS.length]};"></span></span>
-              <span class="dept-count">${r.count}</span>
-            </div>`).join("") : `<div class="symptom-hint">방문 기록이 없습니다.</div>`}
-        </div>
+        ${rows.length ? `
+        <div class="report-detail-list">
+          ${rows.map(r => `<div class="report-detail-row"><span class="report-detail-text">${Storage.escapeHtml(r.name)}</span><span class="report-detail-count">${r.count}회</span></div>`).join("")}
+        </div>` : `<div class="symptom-hint">방문 기록이 없습니다.</div>`}
       </div>
       <div class="report-detail">
         <div class="dept-title">방문 날짜 · 병원</div>
@@ -175,7 +169,7 @@ const Report = (() => {
         <div class="dept-title">증상 통계${s.avgPain != null ? ` · 평균 통증 ${s.avgPain}` : ""}</div>
         ${s.tagRows.length ? `
         <div class="report-detail-list">
-          ${s.tagRows.map(r => `<div class="report-detail-row"><span class="report-detail-text">${Storage.escapeHtml(r.name)}</span><span class="report-detail-count">${r.count}회</span></div>`).join("")}
+          ${s.tagRows.map(r => `<div class="report-detail-row symptom-row"><span class="symptom-pill">${Storage.escapeHtml(r.name)}</span><span class="report-detail-count">${r.count}회</span></div>`).join("")}
         </div>` : `<div class="symptom-hint">증상 기록이 없습니다.</div>`}
       </div>`;
   }
@@ -204,10 +198,9 @@ const Report = (() => {
     const el = document.getElementById("reportBody");
     if (!el) return;
 
-    const today = new Date();
     const memberId = AppState.memberId;
-    const year = today.getFullYear();
-    const month = period === "month" ? today.getMonth() : null;
+    const year = calendarState.year;
+    const month = period === "month" ? calendarState.month : null;
     const summary = computeSummary(memberId, year, month);
     const periodLabel = period === "month" ? `${month + 1}월` : `${year}년`;
 

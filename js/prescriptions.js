@@ -10,6 +10,10 @@ const Prescriptions = (() => {
     });
     document.getElementById("rxList").addEventListener("click", onListClick);
     document.getElementById("rxList").addEventListener("change", onListChange);
+    document.getElementById("rxFilterClear").addEventListener("click", () => {
+      AppState.rxFilterMonth = null;
+      render();
+    });
   }
 
   function refresh() {
@@ -31,6 +35,11 @@ const Prescriptions = (() => {
     return `${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`;
   }
 
+  function formatMonthLabel(monthKey) {
+    const [y, m] = monthKey.split("-").map(Number);
+    return `${y}년 ${m}월`;
+  }
+
   function render() {
     const listEl = document.getElementById("rxList");
     if (!listEl) return;
@@ -38,17 +47,29 @@ const Prescriptions = (() => {
     const all = Storage.getPrescriptions(AppState.memberId)
       .slice()
       .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+    const filtered = AppState.rxFilterMonth
+      ? all.filter(p => (p.startDate || "").startsWith(AppState.rxFilterMonth))
+      : all;
 
     document.getElementById("rxCount").textContent = `${all.length}건`;
 
+    const filterChip = document.getElementById("rxFilterChip");
+    if (AppState.rxFilterMonth) {
+      filterChip.style.display = "flex";
+      document.getElementById("rxFilterLabel").textContent = `${formatMonthLabel(AppState.rxFilterMonth)} 기록만 보는 중`;
+    } else {
+      filterChip.style.display = "none";
+    }
+
     const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findPrescription(formMode.edit) : null) : "";
-    const itemsHtml = all
+    const itemsHtml = filtered
       .filter(p => !(formMode && typeof formMode === "object" && formMode.edit === p.id))
       .map(renderCard)
       .join("");
 
-    if (!formHtml && all.length === 0) {
-      listEl.innerHTML = `<div class="empty-state"><p>아직 처방전 기록이 없습니다.</p></div>`;
+    if (!formHtml && filtered.length === 0) {
+      const emptyMsg = AppState.rxFilterMonth ? "이 달에 처방전 기록이 없습니다." : "아직 처방전 기록이 없습니다.";
+      listEl.innerHTML = `<div class="empty-state"><p>${emptyMsg}</p></div>`;
     } else {
       listEl.innerHTML = formHtml + itemsHtml;
     }
