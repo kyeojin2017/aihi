@@ -529,14 +529,14 @@ a:hover { color: var(--primary-dark); }
 
 .monthly-summary { border-top: 1px solid var(--divider); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; }
 .monthly-summary-head { display: flex; align-items: center; justify-content: space-between; }
-.monthly-summary-head .title { font-size: 14.5px; font-weight: 600; }
-.monthly-summary-head .link { font-size: 13px; color: var(--primary); cursor: pointer; }
+.monthly-summary-head .title { font-size: 18px; font-weight: 600; }
+.monthly-summary-head .link { font-size: 15px; color: var(--primary); cursor: pointer; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
-.stat-card { background: var(--panel-bg); border-radius: 9px; padding: 12px; display: flex; flex-direction: column; gap: 3px; }
-.stat-label { font-size: 11.5px; color: var(--muted); }
-.stat-value { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.stat-unit { font-size: 12px; font-weight: 400; color: var(--muted); }
+.stat-card { background: var(--panel-bg); border-radius: 9px; padding: 14px; display: flex; flex-direction: column; gap: 5px; }
+.stat-label { font-size: 15px; color: var(--muted); }
+.stat-value { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat-unit { font-size: 16px; font-weight: 400; color: var(--muted); }
 button.stat-value {
   border: none;
   background: transparent;
