@@ -3,7 +3,7 @@ const LifeLogs = (() => {
   const WATER_GOAL = 2000;
   const TREND_DAYS = 7;
   let editingExerciseCustom = false;
-  let editingExerciseMinutes = false;
+  let editingExerciseDuration = false;
   let editingAlcoholCustom = false;
 
   // 카드 아이콘 — 외부 라이브러리 없이 인라인 SVG로 그린다
@@ -151,9 +151,9 @@ const LifeLogs = (() => {
       save({ [field]: el.value });
       return;
     }
-    if (field === "exerciseMinutes") {
-      editingExerciseMinutes = false;
-      save({ exerciseMinutes: numOrNull(el.value) });
+    if (field === "exerciseHours" || field === "exerciseMinutes") {
+      editingExerciseDuration = false;
+      save({ [field]: numOrNull(el.value) });
       return;
     }
     save({ [field]: numOrNull(el.value) });
@@ -183,8 +183,8 @@ const LifeLogs = (() => {
         return { ...m, time: formatMealTime(el.dataset.value, parsed.hour, parsed.minute) };
       });
       save({ meals });
-    } else if (action === "addMinutes") {
-      editingExerciseMinutes = true;
+    } else if (action === "editDuration") {
+      editingExerciseDuration = true;
       render();
     } else if (action === "toggleTypePicker") {
       const popover = document.getElementById(el.dataset.target);
@@ -300,7 +300,7 @@ const LifeLogs = (() => {
     if (!isCustom) editingExerciseCustom = false;
     const typeLabel = isCustom && rec.exerciseCustomLabel ? rec.exerciseCustomLabel : rec.exerciseType;
     const showCustomInput = isCustom && (editingExerciseCustom || !rec.exerciseCustomLabel);
-    const showMinutes = !(rec.exerciseHours > 0 && !rec.exerciseMinutes) || editingExerciseMinutes;
+    const collapsed = rec.exerciseHours > 0 && !rec.exerciseMinutes && !editingExerciseDuration;
     return `
       <div class="metric tone-exercise metric-compact">
         <div class="metric-head-row">
@@ -314,15 +314,19 @@ const LifeLogs = (() => {
         <span class="metric-label">운동${typeLabel ? `<span class="metric-type-tag">${Storage.escapeHtml(typeLabel)}</span>` : ""}</span>
         ${showCustomInput ? `<input type="text" class="metric-custom-input" data-field="exerciseCustomLabel" value="${Storage.escapeHtml(rec.exerciseCustomLabel || "")}" placeholder="운동 이름 입력">` : ""}
         <span class="metric-duo">
+          ${collapsed ? `
+          <button type="button" class="metric-duo-group metric-duo-display" data-action="editDuration" aria-label="운동 시간 수정">
+            <span class="metric-duo-display-value">${rec.exerciseHours}</span>
+            <span class="metric-unit">시간</span>
+          </button>` : `
           <span class="metric-duo-group">
             <input type="number" data-field="exerciseHours" value="${rec.exerciseHours ?? ""}" placeholder="0" step="1" min="0" aria-label="운동 시간">
             <span class="metric-unit">시간</span>
           </span>
-          ${showMinutes ? `
           <span class="metric-duo-group">
             <input type="number" data-field="exerciseMinutes" value="${rec.exerciseMinutes ?? ""}" placeholder="0" step="5" min="0" max="59" aria-label="운동 분">
             <span class="metric-unit">분</span>
-          </span>` : `<button type="button" class="metric-add-minutes" data-action="addMinutes">+ 분</button>`}
+          </span>`}
         </span>
       </div>`;
   }

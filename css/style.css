@@ -1084,18 +1084,23 @@ button.metric-icon { cursor: pointer; }
 .metric-type-select:focus { outline: 2px solid var(--tone); outline-offset: -1px; }
 
 .metric-duo { margin-top: auto; display: flex; align-items: baseline; justify-content: flex-end; gap: 14px; }
-.metric-add-minutes {
+.metric-duo-group { display: flex; align-items: baseline; gap: 7px; }
+.metric-duo-display {
   border: none;
   background: transparent;
-  color: var(--tone);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
   padding: 0;
+  cursor: pointer;
+  border-radius: 6px;
 }
-.metric-add-minutes:hover { text-decoration: underline; }
-.metric-duo-group { display: flex; align-items: baseline; gap: 7px; }
+.metric-duo-display:hover { background: rgba(0,0,0,0.04); }
+.metric-duo-display-value {
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--tone);
+  font-variant-numeric: tabular-nums;
+}
 .metric-duo-group input {
   width: 34px;
   min-width: 0;
