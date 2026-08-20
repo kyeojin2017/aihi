@@ -535,7 +535,7 @@ a:hover { color: var(--primary-dark); }
 .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
 .stat-card { background: var(--panel-bg); border-radius: 9px; padding: 14px; display: flex; flex-direction: column; gap: 5px; }
 .stat-label { font-size: 15px; color: var(--muted); }
-.stat-value { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat-value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .stat-unit { font-size: 16px; font-weight: 400; color: var(--muted); }
 button.stat-value {
   border: none;
