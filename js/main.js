@@ -120,6 +120,7 @@ function renderSummaryPanel() {
 
 let familyAddMode = false;
 const MAX_FAMILY_MEMBERS = 5;
+let draggedMemberId = null;
 
 function countMemberRecords(memberId) {
   return Storage.getVisits().filter(v => v.memberId === memberId).length
@@ -134,7 +135,7 @@ function renderFamilyList() {
 
   const members = Storage.getFamilyMembers();
   const itemsHtml = members.map(m => `
-    <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}">
+    <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}" draggable="true">
       <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.relation || m.nickname || "?").charAt(0))}</span>
       ${Storage.escapeHtml(m.nickname || m.relation || "관계 없음")}
       <span class="family-count">${countMemberRecords(m.id)}건</span>
@@ -732,6 +733,46 @@ function bindFamilySwitch() {
       familyAddMode = false;
       renderFamilyList();
     }
+  });
+
+  const familyListEl = document.getElementById("familyList");
+
+  familyListEl.addEventListener("dragstart", e => {
+    const memberEl = e.target.closest(".family-item[data-member]");
+    if (!memberEl) return;
+    draggedMemberId = memberEl.dataset.member;
+    memberEl.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  familyListEl.addEventListener("dragover", e => {
+    const memberEl = e.target.closest(".family-item[data-member]");
+    if (!memberEl || !draggedMemberId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (memberEl.dataset.member !== draggedMemberId) memberEl.classList.add("drag-over");
+  });
+
+  familyListEl.addEventListener("dragleave", e => {
+    const memberEl = e.target.closest(".family-item[data-member]");
+    if (memberEl) memberEl.classList.remove("drag-over");
+  });
+
+  familyListEl.addEventListener("drop", e => {
+    const memberEl = e.target.closest(".family-item[data-member]");
+    if (!memberEl || !draggedMemberId) return;
+    e.preventDefault();
+    memberEl.classList.remove("drag-over");
+    const targetId = memberEl.dataset.member;
+    if (targetId !== draggedMemberId) {
+      Storage.reorderFamilyMembers(draggedMemberId, targetId);
+      renderFamilyList();
+    }
+  });
+
+  familyListEl.addEventListener("dragend", () => {
+    draggedMemberId = null;
+    familyListEl.querySelectorAll(".family-item").forEach(el => el.classList.remove("dragging", "drag-over"));
   });
 }
 

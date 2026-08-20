@@ -149,6 +149,16 @@ const Storage = (() => {
     return list[idx];
   }
 
+  function reorderFamilyMembers(draggedId, targetId) {
+    const list = getFamilyMembers();
+    const fromIdx = list.findIndex(m => m.id === draggedId);
+    const toIdx = list.findIndex(m => m.id === targetId);
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+    const [moved] = list.splice(fromIdx, 1);
+    list.splice(toIdx, 0, moved);
+    write("familyMembers", list);
+  }
+
   function makeList(storeKey) {
     function getAll(memberId) {
       return read(storeKey).filter(x => x.memberId === memberId);
@@ -284,7 +294,7 @@ const Storage = (() => {
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
     getLifeLogs, getLifeLog, saveLifeLog,
-    getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember,
+    getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember, reorderFamilyMembers,
     getConditions: conditionsStore.getAll,
     addCondition: conditionsStore.add,
     updateCondition: conditionsStore.update,

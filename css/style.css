@@ -140,8 +140,12 @@ a:hover { color: var(--primary-dark); }
   border-radius: 9px;
   color: var(--gray);
   font-size: 14px;
-  cursor: pointer;
+  cursor: grab;
+  border-top: 2px solid transparent;
 }
+
+.family-item.dragging { opacity: 0.4; }
+.family-item.drag-over { border-top-color: var(--primary); }
 
 .family-item.active {
   background: var(--white);
