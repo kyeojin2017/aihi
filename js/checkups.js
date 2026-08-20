@@ -42,7 +42,7 @@ const Checkups = (() => {
     const upcoming = all
       .filter(c => c.date && c.status !== "완료")
       .map(c => ({ ...c, days: Math.round((new Date(c.date) - today) / 86400000) }))
-      .filter(c => c.days >= 0 && c.days <= 60)
+      .filter(c => c.days > 0 && c.days <= 60)
       .sort((a, b) => a.days - b.days);
 
     if (!upcoming.length) {
@@ -58,7 +58,7 @@ const Checkups = (() => {
         ${upcoming.slice(0, 5).map(c => `
           <div class="upcoming-item">
             <span>${Storage.escapeHtml(c.name || "")} — ${formatDateFull(c.date)}</span>
-            <span class="dday">${c.days === 0 ? "오늘" : `D-${c.days}`}</span>
+            <span class="dday">D-${c.days}</span>
           </div>`).join("")}
       </div>`;
   }
