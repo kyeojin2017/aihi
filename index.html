@@ -96,7 +96,6 @@
           <span class="legend-item"><span class="legend-dot" style="background:#7E6BB0;"></span>처방전</span>
           <span class="legend-item"><span class="legend-dot" style="background:#C08A5E;"></span>증상</span>
           <span class="legend-item"><span class="legend-dot" style="background:#5B9E7E;"></span>접종·검진</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#AE5480;"></span>생활 기록</span>
         </div>
 
         <div class="monthly-summary">
@@ -126,9 +125,8 @@
             <span class="meta">기록 4건 · 마지막 수정 14:52</span>
           </div>
           <div class="record-actions">
-            <button class="btn">+ 병원방문</button>
-            <button class="btn">+ 처방전</button>
-            <button class="btn btn-primary">저장</button>
+            <button class="btn" id="addVisitTodayBtn" type="button">+ 병원방문</button>
+            <button class="btn" id="addRxTodayBtn" type="button">+ 처방전</button>
           </div>
         </div>
 
@@ -138,52 +136,9 @@
 
           <div class="card" id="symptomCard"></div>
 
-          <div class="card card-accent-blue">
-            <div class="card-head">
-              <div class="card-head-left">
-                <span class="card-title">병원 방문</span>
-                <span class="badge badge-blue">내과</span>
-              </div>
-              <span class="card-link">수정</span>
-            </div>
-            <div class="visit-grid">
-              <div class="field"><span class="field-label">날짜 · 시간</span><span class="field-box">2026.08.08 09:40</span></div>
-              <div class="field"><span class="field-label">병원</span><span class="field-box">서울연세내과의원</span></div>
-              <div class="field"><span class="field-label">진료과</span><span class="field-box">내과</span></div>
-              <div class="field"><span class="field-label">담당 의사</span><span class="field-box">박정우 원장</span></div>
-              <div class="field"><span class="field-label">다음 예약</span><span class="field-box accent">2026.08.13 09:30</span></div>
-              <div class="field"><span class="field-label">처치 · 수액</span><span class="field-box">수액 1팩 (영양수액)</span></div>
-            </div>
-            <div class="memo-row">
-              <span class="memo-label">진단 메모</span>
-              <span class="memo-box">급성 인두염 소견. 신속항원 음성, CRP 정상 범위. 3일 내 열 지속되면 재방문 권유.</span>
-            </div>
-          </div>
+          <div id="todayVisitBody"></div>
 
-          <div class="card card-accent-purple rx-card">
-            <div class="card-head">
-              <div class="card-head-left">
-                <span class="card-title">처방전</span>
-                <span class="card-subtitle">5일분 · 2026.08.08 – 08.12</span>
-              </div>
-              <a class="card-link" href="https://nedrug.mfds.go.kr" target="_blank" rel="noopener">약 설명 보기</a>
-            </div>
-            <div class="rx-table">
-              <div class="rx-row head"><span>약 이름</span><span>용량</span><span>복용</span><span>비고</span></div>
-              <div class="rx-row"><span>세파클러 캡슐</span><span class="rx-dose">250mg</span><span class="rx-freq">1일 3회</span><span class="rx-note">식후 30분</span></div>
-              <div class="rx-row"><span>아세트아미노펜</span><span class="rx-dose">500mg</span><span class="rx-freq">필요 시</span><span class="rx-note">1일 최대 4정</span></div>
-              <div class="rx-row last"><span>레바미피드</span><span class="rx-dose">100mg</span><span class="rx-freq">1일 3회</span><span class="rx-note">위 보호</span></div>
-            </div>
-            <div class="warning-box">
-              <span class="warning-dot"></span>
-              <span class="warning-text">중복 확인 — 복용 중인 <strong>타이레놀</strong>과 아세트아미노펜 성분이 겹칩니다. 함께 복용하지 마세요.</span>
-              <span class="warning-confirm">확인</span>
-            </div>
-            <div class="rx-memo-row">
-              <span class="memo-label">주의 메모</span>
-              <span class="memo-box">유제품·제산제와 2시간 간격 두기. 공복 복용 금지. 복용 중 음주 금지.</span>
-            </div>
-          </div>
+          <div id="todayRxBody"></div>
 
         </div>
 

@@ -200,5 +200,11 @@ const Prescriptions = (() => {
     }
   }
 
-  return { render, init };
+  function openAddForm() {
+    formMode = "add";
+    draftItems = [{ drugName: "", dose: "", frequency: "", note: "" }];
+    render();
+  }
+
+  return { render, init, openAddForm };
 })();

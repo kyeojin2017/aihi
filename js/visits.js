@@ -153,5 +153,10 @@ const Visits = (() => {
       </div>`;
   }
 
-  return { render, init };
+  function openAddForm() {
+    formMode = "add";
+    render();
+  }
+
+  return { render, init, openAddForm };
 })();

@@ -259,6 +259,120 @@ function renderRecordList() {
     </div>`).join("");
 }
 
+function formatDateFull(dateKey) {
+  if (!dateKey) return "-";
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return `${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`;
+}
+
+function goToTab(tab) {
+  document.querySelectorAll(".subtab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  setView(tab);
+}
+
+function renderTodayVisits() {
+  const el = document.getElementById("todayVisitBody");
+  if (!el) return;
+
+  const dateKey = Storage.toDateKey(AppState.selectedDate);
+  const visits = Storage.getVisits().filter(v => v.memberId === AppState.memberId && v.date === dateKey);
+
+  if (!visits.length) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left"><span class="card-title">병원 방문</span></div>
+          <span class="card-link" data-action="goVisitTab">전체 보기</span>
+        </div>
+        <p class="symptom-hint">이 날짜에 병원 방문 기록이 없습니다.</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = visits.map(v => `
+    <div class="card card-accent-blue">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">${Storage.escapeHtml(v.hospital || "병원 방문")}</span>
+          ${v.department ? `<span class="badge badge-blue">${Storage.escapeHtml(v.department)}</span>` : ""}
+        </div>
+        <span class="card-link" data-action="goVisitTab" data-date="${dateKey}">수정</span>
+      </div>
+      <div class="visit-grid">
+        <div class="field"><span class="field-label">날짜 · 시간</span><span class="field-box">${formatDateFull(v.date)} ${v.time || ""}</span></div>
+        <div class="field"><span class="field-label">병원</span><span class="field-box">${Storage.escapeHtml(v.hospital || "-")}</span></div>
+        <div class="field"><span class="field-label">진료과</span><span class="field-box">${Storage.escapeHtml(v.department || "-")}</span></div>
+        <div class="field"><span class="field-label">담당 의사</span><span class="field-box">${Storage.escapeHtml(v.doctor || "-")}</span></div>
+        <div class="field"><span class="field-label">다음 예약</span><span class="field-box accent">${formatDateFull(v.nextVisitDate)}</span></div>
+      </div>
+      ${v.diagnosisMemo ? `<div class="memo-row"><span class="memo-label">진단 메모</span><span class="memo-box">${Storage.escapeHtml(v.diagnosisMemo)}</span></div>` : ""}
+    </div>`).join("");
+}
+
+function renderTodayRx() {
+  const el = document.getElementById("todayRxBody");
+  if (!el) return;
+
+  const dateKey = Storage.toDateKey(AppState.selectedDate);
+  const prescriptions = Storage.getPrescriptions(AppState.memberId)
+    .filter(p => p.startDate && dateKey >= p.startDate && dateKey <= (p.endDate || p.startDate));
+
+  if (!prescriptions.length) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left"><span class="card-title">처방전</span></div>
+          <span class="card-link" data-action="goRxTab">전체 보기</span>
+        </div>
+        <p class="symptom-hint">이 날짜에 복용 중인 처방전이 없습니다.</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = prescriptions.map(p => `
+    <div class="card card-accent-purple rx-card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">처방전</span>
+          <span class="card-subtitle">${formatDateFull(p.startDate)} – ${formatDateFull(p.endDate).slice(5)}</span>
+        </div>
+        <span class="card-link" data-action="goRxTab">수정</span>
+      </div>
+      <div class="rx-table">
+        <div class="rx-row head"><span>약 이름</span><span>용량</span><span>복용</span><span>비고</span></div>
+        ${(p.items || []).map((it, i) => `
+          <div class="rx-row${i === (p.items.length - 1) ? " last" : ""}">
+            <span>${Storage.escapeHtml(it.drugName || "")}</span>
+            <span class="rx-dose">${Storage.escapeHtml(it.dose || "")}</span>
+            <span class="rx-freq">${Storage.escapeHtml(it.frequency || "")}</span>
+            <span class="rx-note">${Storage.escapeHtml(it.note || "")}</span>
+          </div>`).join("")}
+      </div>
+      ${p.cautionMemo ? `<div class="rx-memo-row"><span class="memo-label">주의 메모</span><span class="memo-box">${Storage.escapeHtml(p.cautionMemo)}</span></div>` : ""}
+    </div>`).join("");
+}
+
+function bindTodayRecordActions() {
+  document.getElementById("addVisitTodayBtn").addEventListener("click", () => {
+    goToTab("visit");
+    Visits.openAddForm();
+  });
+  document.getElementById("addRxTodayBtn").addEventListener("click", () => {
+    goToTab("rx");
+    Prescriptions.openAddForm();
+  });
+  document.getElementById("todayVisitBody").addEventListener("click", e => {
+    const el = e.target.closest("[data-action='goVisitTab']");
+    if (!el) return;
+    if (el.dataset.date) AppState.visitFilterDate = el.dataset.date;
+    goToTab("visit");
+  });
+  document.getElementById("todayRxBody").addEventListener("click", e => {
+    if (!e.target.closest("[data-action='goRxTab']")) return;
+    goToTab("rx");
+  });
+}
+
 function buildReportSummaryText() {
   const period = document.querySelector("#reportPeriodToggle button.active")?.dataset.period || "month";
   const today = new Date();
@@ -444,6 +558,8 @@ window.refreshAll = function refreshAll() {
   renderRecordDate();
   renderUpcomingBanner();
   Symptoms.render();
+  renderTodayVisits();
+  renderTodayRx();
   if (recordViewMode === "list") renderRecordList();
   if (currentView === "visit") Visits.render();
   if (currentView === "rx") Prescriptions.render();
@@ -646,6 +762,8 @@ Storage.seedIfEmpty();
 renderCalendar();
 renderRecordDate();
 renderUpcomingBanner();
+renderTodayVisits();
+renderTodayRx();
 refreshFamilyIdentity();
 Symptoms.render();
 Visits.init();
@@ -661,6 +779,7 @@ bindLifeDateNav();
 bindMonthPicker();
 bindSubtabs();
 bindFamilySwitch();
+bindTodayRecordActions();
 bindTopNav();
 bindTabLinks();
 bindRecordViewToggle();
