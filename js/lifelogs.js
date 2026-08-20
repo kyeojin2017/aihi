@@ -26,6 +26,7 @@ const LifeLogs = (() => {
     if (!panel) return;
     panel.addEventListener("click", onClick);
     panel.addEventListener("change", onChange);
+    document.addEventListener("click", closePickersOutside);
   }
 
   function current() {
@@ -62,8 +63,8 @@ const LifeLogs = (() => {
       save({ meals });
       return;
     }
-    if (field === "memo" || field === "exerciseType" || field === "caffeineType") {
-      save({ [field]: el.value });
+    if (field === "memo") {
+      save({ memo: el.value });
       return;
     }
     save({ [field]: numOrNull(el.value) });
@@ -87,6 +88,19 @@ const LifeLogs = (() => {
       save({ alcohol: !rec.alcohol });
     } else if (action === "togglePeriod") {
       save({ isPeriodDay: !rec.isPeriodDay });
+    } else if (action === "toggleTypePicker") {
+      const popover = document.getElementById(el.dataset.target);
+      const wasOpen = popover.classList.contains("open");
+      document.querySelectorAll(".type-picker.open").forEach(p => p.classList.remove("open"));
+      if (!wasOpen) popover.classList.add("open");
+    } else if (action === "pickType") {
+      save({ [el.dataset.field]: el.dataset.value });
+    }
+  }
+
+  function closePickersOutside(e) {
+    if (!e.target.closest(".metric-icon-wrap")) {
+      document.querySelectorAll(".type-picker.open").forEach(p => p.classList.remove("open"));
     }
   }
 
@@ -132,7 +146,7 @@ const LifeLogs = (() => {
   function metricTile({ tone, name, label, unit, value, field, step, min, max, extra }) {
     const shown = value == null ? "" : value;
     return `
-      <div class="metric tone-${tone}">
+      <div class="metric tone-${tone} metric-compact">
         <span class="metric-icon">${icon(name)}</span>
         <span class="metric-label">${label}</span>
         <span class="metric-value">
@@ -147,20 +161,27 @@ const LifeLogs = (() => {
   const EXERCISE_TYPES = ["걷기", "달리기", "자전거", "수영", "헬스", "요가", "등산", "기타"];
   const CAFFEINE_TYPES = ["커피", "에너지드링크", "차", "탄산음료", "기타"];
 
-  function typeSelect(field, options, value, placeholder) {
+  function typePicker(id, field, options, value) {
     return `
-      <select class="metric-type-select" data-field="${field}" aria-label="${placeholder}">
-        <option value=""${!value ? " selected" : ""}>${placeholder}</option>
-        ${options.map(o => `<option value="${o}"${value === o ? " selected" : ""}>${o}</option>`).join("")}
-      </select>`;
+      <div class="type-picker" id="${id}">
+        ${options.map(o => `<button type="button" class="type-chip${value === o ? " active" : ""}" data-action="pickType" data-field="${field}" data-value="${o}">${o}</button>`).join("")}
+      </div>`;
+  }
+
+  function iconWithPicker(tone, name, pickerId, ariaLabel, popoverHtml) {
+    return `
+      <span class="metric-icon-wrap">
+        <button type="button" class="metric-icon" data-action="toggleTypePicker" data-target="${pickerId}" aria-label="${ariaLabel}">${icon(name)}</button>
+        ${popoverHtml}
+      </span>`;
   }
 
   function exerciseTile(rec) {
     return `
-      <div class="metric tone-exercise">
-        <span class="metric-icon">${icon("exercise")}</span>
-        <span class="metric-label">운동</span>
-        ${typeSelect("exerciseType", EXERCISE_TYPES, rec.exerciseType, "종류 선택")}
+      <div class="metric tone-exercise metric-compact">
+        ${iconWithPicker("exercise", "exercise", "exerciseTypePicker", "운동 종류 선택",
+          typePicker("exerciseTypePicker", "exerciseType", EXERCISE_TYPES, rec.exerciseType))}
+        <span class="metric-label">운동${rec.exerciseType ? `<span class="metric-type-tag">${Storage.escapeHtml(rec.exerciseType)}</span>` : ""}</span>
         <span class="metric-duo">
           <span class="metric-duo-group">
             <input type="number" data-field="exerciseHours" value="${rec.exerciseHours ?? ""}" placeholder="0" step="1" min="0" aria-label="운동 시간">
@@ -176,10 +197,10 @@ const LifeLogs = (() => {
 
   function caffeineTile(rec) {
     return `
-      <div class="metric tone-caffeine">
-        <span class="metric-icon">${icon("caffeine")}</span>
-        <span class="metric-label">카페인</span>
-        ${typeSelect("caffeineType", CAFFEINE_TYPES, rec.caffeineType, "음료 선택")}
+      <div class="metric tone-caffeine metric-compact">
+        ${iconWithPicker("caffeine", "caffeine", "caffeineTypePicker", "카페인 음료 종류 선택",
+          typePicker("caffeineTypePicker", "caffeineType", CAFFEINE_TYPES, rec.caffeineType))}
+        <span class="metric-label">카페인${rec.caffeineType ? `<span class="metric-type-tag">${Storage.escapeHtml(rec.caffeineType)}</span>` : ""}</span>
         <span class="metric-value">
           <input type="number" data-field="caffeineCups" value="${rec.caffeineCups ?? ""}" placeholder="0" step="1" min="0" aria-label="카페인 잔 수">
           <span class="metric-unit">잔</span>

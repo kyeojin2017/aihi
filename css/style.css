@@ -920,13 +920,13 @@ textarea.memo-box { resize: vertical; min-height: 56px; }
 .tone-alcohol  { --tone: #A4553F; --tone-tint: #F9EBE6; }
 .tone-period   { --tone: #AE5480; --tone-tint: #FAEAF2; }
 
-.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 
 .metric {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px;
+  gap: 8px;
+  padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: linear-gradient(180deg, var(--tone-tint) 0%, #fff 58%);
@@ -934,19 +934,27 @@ textarea.memo-box { resize: vertical; min-height: 56px; }
 
 /* 아이콘은 항목 색을 꽉 채워 멀리서도 구분되게 한다 */
 .metric-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
   background: var(--tone);
   color: #fff;
+  border: none;
+  padding: 0;
+  cursor: default;
+  font: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 10px -3px var(--tone);
 }
-.metric-icon svg { width: 26px; height: 26px; stroke-width: 2.1; }
+button.metric-icon { cursor: pointer; }
+.metric-icon svg { width: 19px; height: 19px; stroke-width: 2.1; }
 
-.metric-label { font-size: 13.5px; font-weight: 600; color: var(--text-soft); }
+.metric-icon-wrap { position: relative; display: inline-flex; }
+
+.metric-label { font-size: 12.5px; font-weight: 600; color: var(--text-soft); display: flex; flex-direction: column; gap: 2px; }
+.metric-type-tag { font-size: 11px; font-weight: 500; color: var(--tone); }
 
 /* 값은 타일 아래쪽에 붙여 나란히 읽히게 한다 */
 .metric-value { margin-top: auto; display: flex; align-items: baseline; gap: 5px; }
@@ -957,7 +965,7 @@ textarea.memo-box { resize: vertical; min-height: 56px; }
   background: transparent;
   padding: 0;
   font-family: inherit;
-  font-size: 30px;
+  font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);
@@ -968,7 +976,36 @@ textarea.memo-box { resize: vertical; min-height: 56px; }
 .metric-value input::-webkit-outer-spin-button,
 .metric-value input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .metric-value input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
-.metric-unit { font-size: 13px; color: var(--gray-soft); flex: 0 0 auto; }
+.metric-unit { font-size: 12px; color: var(--gray-soft); flex: 0 0 auto; }
+
+.type-picker {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 25;
+  width: 176px;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(20,24,28,0.14);
+}
+.type-picker.open { display: flex; }
+.type-chip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text-soft);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.type-chip:hover { border-color: var(--tone); }
+.type-chip.active { background: var(--tone); border-color: var(--tone); color: #fff; font-weight: 600; }
 
 .metric-type-select {
   width: 100%;
