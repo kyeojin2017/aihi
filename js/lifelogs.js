@@ -32,7 +32,8 @@ const LifeLogs = (() => {
   function current() {
     const dateKey = Storage.toDateKey(AppState.selectedDate);
     const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
-      meals: [], exerciseType: "", exerciseHours: null, exerciseMinutes: null, sleepHours: null, waterMl: null,
+      meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
+      sleepHours: null, waterMl: null,
       alcohol: false, caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
@@ -63,8 +64,8 @@ const LifeLogs = (() => {
       save({ meals });
       return;
     }
-    if (field === "memo") {
-      save({ memo: el.value });
+    if (field === "memo" || field === "exerciseCustomLabel") {
+      save({ [field]: el.value });
       return;
     }
     save({ [field]: numOrNull(el.value) });
@@ -94,7 +95,9 @@ const LifeLogs = (() => {
       document.querySelectorAll(".type-picker.open").forEach(p => p.classList.remove("open"));
       if (!wasOpen) popover.classList.add("open");
     } else if (action === "pickType") {
-      save({ [el.dataset.field]: el.dataset.value });
+      const patch = { [el.dataset.field]: el.dataset.value };
+      if (el.dataset.field === "exerciseType" && el.dataset.value !== "기타") patch.exerciseCustomLabel = "";
+      save(patch);
     }
   }
 
@@ -176,12 +179,17 @@ const LifeLogs = (() => {
       </span>`;
   }
 
+  const INTENSITY_LEVELS = ["낮음", "보통", "높음"];
+
   function exerciseTile(rec) {
+    const isCustom = rec.exerciseType === "기타";
+    const typeLabel = isCustom && rec.exerciseCustomLabel ? rec.exerciseCustomLabel : rec.exerciseType;
     return `
       <div class="metric tone-exercise metric-compact">
         ${iconWithPicker("exercise", "exercise", "exerciseTypePicker", "운동 종류 선택",
           typePicker("exerciseTypePicker", "exerciseType", EXERCISE_TYPES, rec.exerciseType))}
-        <span class="metric-label">운동${rec.exerciseType ? `<span class="metric-type-tag">${Storage.escapeHtml(rec.exerciseType)}</span>` : ""}</span>
+        <span class="metric-label">운동${typeLabel ? `<span class="metric-type-tag">${Storage.escapeHtml(typeLabel)}</span>` : ""}</span>
+        ${isCustom ? `<input type="text" class="metric-custom-input" data-field="exerciseCustomLabel" value="${Storage.escapeHtml(rec.exerciseCustomLabel || "")}" placeholder="운동 이름 입력">` : ""}
         <span class="metric-duo">
           <span class="metric-duo-group">
             <input type="number" data-field="exerciseHours" value="${rec.exerciseHours ?? ""}" placeholder="0" step="1" min="0" aria-label="운동 시간">
@@ -192,6 +200,10 @@ const LifeLogs = (() => {
             <span class="metric-unit">분</span>
           </span>
         </span>
+        ${rec.exerciseType ? `
+        <div class="metric-intensity">
+          ${INTENSITY_LEVELS.map(lv => `<button type="button" class="type-chip mini${rec.exerciseIntensity === lv ? " active" : ""}" data-action="pickType" data-field="exerciseIntensity" data-value="${lv}">${lv}</button>`).join("")}
+        </div>` : ""}
       </div>`;
   }
 

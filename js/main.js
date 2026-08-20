@@ -144,7 +144,7 @@ function renderFamilyList() {
       <select class="field-box" data-field="relation">
         ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
       </select>
-      <input type="text" class="field-box" data-field="nickname" placeholder="별명·애칭 (선택)">
+      <input type="text" class="field-box" data-field="nickname" placeholder="별명이나 애칭을 입력 (안 넣어도 됨)">
       <div class="btn-row">
         <button type="button" class="btn" data-action="cancel-add-member">취소</button>
         <button type="button" class="btn btn-primary" data-action="save-add-member">추가</button>

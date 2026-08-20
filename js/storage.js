@@ -99,7 +99,8 @@ const Storage = (() => {
     if (idx === -1) {
       const rec = {
         id: uid(), date, memberId,
-        meals: [], exerciseType: "", exerciseHours: null, exerciseMinutes: null, sleepHours: null, waterMl: null,
+        meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
+        sleepHours: null, waterMl: null,
         alcohol: false, caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
         createdAt: now, updatedAt: now,
         ...patch
