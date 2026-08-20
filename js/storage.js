@@ -101,7 +101,7 @@ const Storage = (() => {
         id: uid(), date, memberId,
         meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
         sleepHours: null, waterMl: null,
-        alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholOrder: "before",
+        alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
         caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
         createdAt: now, updatedAt: now,
         ...patch

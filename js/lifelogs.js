@@ -5,6 +5,7 @@ const LifeLogs = (() => {
   let editingExerciseDuration = false;
   let mealsVisible = true;
   let draggingAlcohol = false;
+  let periodProjectionYear = null;
 
   // 카드 아이콘 — 외부 라이브러리 없이 인라인 SVG로 그린다
   const ICON = {
@@ -38,17 +39,27 @@ const LifeLogs = (() => {
       }
     });
     panel.addEventListener("dragover", e => {
-      if (draggingAlcohol && e.target.closest("[data-drop-zone='meals']")) {
+      if (draggingAlcohol && e.target.closest("[data-drop-zone]")) {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
       }
     });
     panel.addEventListener("drop", e => {
-      const zone = e.target.closest("[data-drop-zone='meals']");
+      const zone = e.target.closest("[data-drop-zone]");
       if (draggingAlcohol && zone) {
         e.preventDefault();
         const { rec } = current();
-        save({ alcoholOrder: rec.alcoholOrder === "after" ? "before" : "after" });
+        const meals = rec.meals || [];
+        let position;
+        if (zone.dataset.dropZone === "meal-row") {
+          const idx = Number(zone.dataset.index);
+          const rect = zone.getBoundingClientRect();
+          const isTopHalf = (e.clientY - rect.top) < rect.height / 2;
+          position = isTopHalf ? idx : idx + 1;
+        } else {
+          position = meals.length;
+        }
+        save({ alcoholPosition: position });
       }
       draggingAlcohol = false;
     });
@@ -60,7 +71,7 @@ const LifeLogs = (() => {
     const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
       meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
       sleepHours: null, waterMl: null,
-      alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholOrder: "before",
+      alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
       caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
@@ -263,6 +274,11 @@ const LifeLogs = (() => {
     } else if (action === "toggleMeals") {
       mealsVisible = !mealsVisible;
       render();
+    } else if (action === "periodProjectionYear") {
+      const settings = Storage.getPeriodSettings(AppState.memberId) || {};
+      const base = periodProjectionYear ?? defaultPeriodProjectionYear(settings);
+      periodProjectionYear = base + Number(el.dataset.delta);
+      render();
     }
   }
 
@@ -462,15 +478,10 @@ const LifeLogs = (() => {
       </div>`;
   }
 
-  function renderMeals(rec) {
-    const meals = rec.meals || [];
-    if (meals.length === 0) {
-      return `<div class="life-empty">기록된 식사가 없습니다.</div>`;
-    }
-    return meals.map((meal, i) => {
-      const t = parseMealTime(meal.time);
-      return `
-      <div class="meal-row">
+  function renderMealRow(meal, i) {
+    const t = parseMealTime(meal.time);
+    return `
+      <div class="meal-row" data-drop-zone="meal-row" data-index="${i}">
         <div class="meal-time-input">
           <div class="meal-ampm">
             <button type="button" class="meal-ampm-btn${t.period === "오전" ? " active" : ""}" data-action="setMealPeriod" data-index="${i}" data-value="오전">오전</button>
@@ -486,7 +497,14 @@ const LifeLogs = (() => {
           value="${Storage.escapeHtml(meal.memo || "")}" placeholder="먹은 음식">
         <button type="button" class="meal-remove" data-action="removeMeal" data-index="${i}" aria-label="식사 삭제">✕</button>
       </div>`;
-    }).join("");
+  }
+
+  function renderMeals(rec) {
+    const meals = rec.meals || [];
+    if (meals.length === 0) {
+      return `<div class="life-empty">기록된 식사가 없습니다.</div>`;
+    }
+    return meals.map((meal, i) => renderMealRow(meal, i)).join("");
   }
 
   function multiTypePicker(id, options, selectedTypes) {
@@ -548,15 +566,21 @@ const LifeLogs = (() => {
   function renderPeriodRow(m) {
     return `
       <div class="period-projection-row">
-        <span class="period-projection-month">${m.month}월</span>
-        ${m.day ? `<span class="period-projection-date">${m.day}일</span>${m.isCurrent ? `<span class="period-projection-tag">현재</span>` : ""}` : ""}
+        <span class="period-projection-month">🌸 ${m.month}월</span>
+        ${m.day
+          ? `<span class="period-projection-date">${m.day}일</span>${m.isCurrent ? `<span class="period-projection-tag">현재</span>` : ""}`
+          : `<span class="period-projection-date empty">-</span>`}
       </div>`;
+  }
+
+  function defaultPeriodProjectionYear(settings) {
+    return settings.startDate ? Number(settings.startDate.split("-")[0]) : new Date().getFullYear();
   }
 
   function renderPeriodCard(rec) {
     const settings = Storage.getPeriodSettings(AppState.memberId) || {};
     const nextDate = computeNextPeriodDate(settings);
-    const year = settings.startDate ? Number(settings.startDate.split("-")[0]) : new Date().getFullYear();
+    const year = periodProjectionYear ?? defaultPeriodProjectionYear(settings);
     const yearMonths = computePeriodYearProjection(settings, year);
     return `
       <div class="card life-card">
@@ -579,7 +603,11 @@ const LifeLogs = (() => {
             </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 다음 예정일을 계산합니다.</div>`}
           </div>
           <div class="period-projection">
-            <div class="period-projection-title">${year}년 생리 시작일</div>
+            <div class="period-projection-title">
+              <button type="button" class="period-year-nav" data-action="periodProjectionYear" data-delta="-1" aria-label="이전 년도">‹</button>
+              <span>${year}년 생리 시작일</span>
+              <button type="button" class="period-year-nav" data-action="periodProjectionYear" data-delta="1" aria-label="다음 년도">›</button>
+            </div>
             <div class="period-projection-cols">
               <div class="period-projection-col">${yearMonths.slice(0, 6).map(renderPeriodRow).join("")}</div>
               <div class="period-projection-col">${yearMonths.slice(6).map(renderPeriodRow).join("")}</div>
@@ -640,9 +668,14 @@ const LifeLogs = (() => {
           </span>
         </div>
         ${(() => {
-          const alcoholBlock = rec.alcohol ? renderAlcoholDetail(rec) : "";
-          const mealsBlock = mealsVisible ? `<div class="meal-list" data-drop-zone="meals">${renderMeals(rec)}</div>` : "";
-          return rec.alcoholOrder === "after" ? mealsBlock + alcoholBlock : alcoholBlock + mealsBlock;
+          if (!mealsVisible) return rec.alcohol ? renderAlcoholDetail(rec) : "";
+          if (!rec.alcohol) return `<div class="meal-list" data-drop-zone="meals">${renderMeals(rec)}</div>`;
+          const meals = rec.meals || [];
+          const pos = Math.max(0, Math.min(rec.alcoholPosition ?? 0, meals.length));
+          const beforeHtml = meals.slice(0, pos).map((m, i) => renderMealRow(m, i)).join("");
+          const afterHtml = meals.slice(pos).map((m, i) => renderMealRow(m, i + pos)).join("");
+          const emptyHtml = meals.length === 0 ? `<div class="life-empty">기록된 식사가 없습니다.</div>` : "";
+          return `<div class="meal-list" data-drop-zone="meals">${beforeHtml}${renderAlcoholDetail(rec)}${afterHtml}${emptyHtml}</div>`;
         })()}
       </div>
 
