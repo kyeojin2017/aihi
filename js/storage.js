@@ -101,7 +101,8 @@ const Storage = (() => {
         id: uid(), date, memberId,
         meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
         sleepHours: null, waterMl: null,
-        alcohol: false, caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
+        alcohol: false, alcoholType: "", alcoholCustomLabel: "", alcoholBottles: null, alcoholGlasses: null,
+        caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
         createdAt: now, updatedAt: now,
         ...patch
       };
@@ -111,6 +112,31 @@ const Storage = (() => {
     }
     list[idx] = { ...list[idx], ...patch, updatedAt: now };
     write("lifeLogs", list);
+    return list[idx];
+  }
+
+  // 생리 주기 — 구성원당 1건 (마지막 시작일 + 평균 주기로 다음 예정일 계산)
+  function getPeriodSettings(memberId) {
+    return read("periodSettings").find(p => p.memberId === memberId) || null;
+  }
+
+  function savePeriodSettings(memberId, patch) {
+    const list = read("periodSettings");
+    const idx = list.findIndex(p => p.memberId === memberId);
+    const now = new Date().toISOString();
+    if (idx === -1) {
+      const rec = {
+        id: uid(), memberId,
+        startDate: null, periodLength: null, cycleLength: null,
+        createdAt: now, updatedAt: now,
+        ...patch
+      };
+      list.push(rec);
+      write("periodSettings", list);
+      return rec;
+    }
+    list[idx] = { ...list[idx], ...patch, updatedAt: now };
+    write("periodSettings", list);
     return list[idx];
   }
 
@@ -294,6 +320,7 @@ const Storage = (() => {
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
     getLifeLogs, getLifeLog, saveLifeLog,
+    getPeriodSettings, savePeriodSettings,
     getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember, reorderFamilyMembers,
     getConditions: conditionsStore.getAll,
     addCondition: conditionsStore.add,

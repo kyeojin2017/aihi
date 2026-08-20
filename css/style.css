@@ -739,6 +739,33 @@ a:hover { color: var(--primary-dark); }
 
 .symptom-hint { color: var(--muted); font-size: 13.5px; padding: 6px 0; }
 
+.period-grid { margin-top: 12px; }
+.period-next {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #FAEAF2;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.period-next-label { font-size: 12.5px; color: var(--muted); }
+.period-next-value { font-size: 15px; font-weight: 600; color: #AE5480; }
+.period-dday { font-size: 12px; font-weight: 600; color: #AE5480; margin-left: auto; }
+
+.alcohol-detail {
+  margin: 4px 0 2px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--tone-tint);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.alcohol-detail .metric-head-row { justify-content: flex-start; gap: 10px; }
+.alcohol-qty-grid { grid-template-columns: repeat(2, minmax(0,1fr)); margin-top: 0; }
+
 /* ---- Visit list view ---- */
 .visit-view-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 auto; }
 .visit-view-title { display: flex; align-items: baseline; gap: 10px; }
@@ -1055,6 +1082,17 @@ button.metric-icon { cursor: pointer; }
 .metric-type-select:focus { outline: 2px solid var(--tone); outline-offset: -1px; }
 
 .metric-duo { margin-top: auto; display: flex; align-items: baseline; justify-content: flex-end; gap: 14px; }
+.metric-add-minutes {
+  border: none;
+  background: transparent;
+  color: var(--tone);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.metric-add-minutes:hover { text-decoration: underline; }
 .metric-duo-group { display: flex; align-items: baseline; gap: 7px; }
 .metric-duo-group input {
   width: 34px;
