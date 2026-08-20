@@ -2,6 +2,7 @@ const LifeLogs = (() => {
   const WATER_STEP = 250;
   const WATER_GOAL = 2000;
   const TREND_DAYS = 7;
+  let editingExerciseCustom = false;
 
   // 카드 아이콘 — 외부 라이브러리 없이 인라인 SVG로 그린다
   const ICON = {
@@ -64,7 +65,12 @@ const LifeLogs = (() => {
       save({ meals });
       return;
     }
-    if (field === "memo" || field === "exerciseCustomLabel") {
+    if (field === "exerciseCustomLabel") {
+      editingExerciseCustom = !el.value.trim();
+      save({ [field]: el.value });
+      return;
+    }
+    if (field === "memo") {
       save({ [field]: el.value });
       return;
     }
@@ -96,7 +102,14 @@ const LifeLogs = (() => {
       if (!wasOpen) popover.classList.add("open");
     } else if (action === "pickType") {
       const patch = { [el.dataset.field]: el.dataset.value };
-      if (el.dataset.field === "exerciseType" && el.dataset.value !== "기타") patch.exerciseCustomLabel = "";
+      if (el.dataset.field === "exerciseType") {
+        if (el.dataset.value === "기타") {
+          editingExerciseCustom = true;
+        } else {
+          patch.exerciseCustomLabel = "";
+          editingExerciseCustom = false;
+        }
+      }
       save(patch);
     }
   }
@@ -183,8 +196,9 @@ const LifeLogs = (() => {
 
   function exerciseTile(rec) {
     const isCustom = rec.exerciseType === "기타";
+    if (!isCustom) editingExerciseCustom = false;
     const typeLabel = isCustom && rec.exerciseCustomLabel ? rec.exerciseCustomLabel : rec.exerciseType;
-    const showCustomInput = isCustom && !rec.exerciseCustomLabel;
+    const showCustomInput = isCustom && (editingExerciseCustom || !rec.exerciseCustomLabel);
     const showMinutes = !(rec.exerciseHours > 0 && !rec.exerciseMinutes);
     return `
       <div class="metric tone-exercise metric-compact">
