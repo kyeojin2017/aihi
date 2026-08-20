@@ -72,6 +72,7 @@ const Profile = (() => {
       </div>
       <div class="visit-grid">
         <div class="field"><span class="field-label">관계</span><span class="field-box">${Storage.escapeHtml(info.relation || "-")}</span></div>
+        <div class="field"><span class="field-label">별명·애칭</span><span class="field-box">${Storage.escapeHtml(info.nickname || "-")}</span></div>
         <div class="field"><span class="field-label">성별</span><span class="field-box">${GENDER_LABEL[info.gender] || "-"}</span></div>
         <div class="field"><span class="field-label">생년월일</span><span class="field-box">${formatBirthDate(info.birthDate)}${age !== null ? ` (만 ${age}세)` : ""}</span></div>
         <div class="field"><span class="field-label">혈액형</span><span class="field-box">${info.bloodType || "-"}</span></div>
@@ -93,6 +94,7 @@ const Profile = (() => {
             ${RELATIONS.map(r => `<option value="${r}"${info.relation === r ? " selected" : ""}>${r}</option>`).join("")}
           </select>
         </div>
+        <div class="field"><span class="field-label">별명·애칭</span><input class="field-box" type="text" data-field="nickname" value="${Storage.escapeHtml(info.nickname || "")}" placeholder="예: 딸, 첫째"></div>
         <div class="field">
           <span class="field-label">성별</span>
           <select class="field-box" data-field="gender">

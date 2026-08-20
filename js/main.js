@@ -134,8 +134,8 @@ function renderFamilyList() {
   const members = Storage.getFamilyMembers();
   const itemsHtml = members.map(m => `
     <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}">
-      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.relation || "?").charAt(0))}</span>
-      ${Storage.escapeHtml(m.relation || "관계 없음")}
+      <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.nickname || m.relation || "?").charAt(0))}</span>
+      ${Storage.escapeHtml(m.nickname || m.relation || "관계 없음")}
       <span class="family-count">${countMemberRecords(m.id)}건</span>
     </div>`).join("");
 
@@ -144,6 +144,7 @@ function renderFamilyList() {
       <select class="field-box" data-field="relation">
         ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
       </select>
+      <input type="text" class="field-box" data-field="nickname" placeholder="별명·애칭 (선택)">
       <div class="btn-row">
         <button type="button" class="btn" data-action="cancel-add-member">취소</button>
         <button type="button" class="btn btn-primary" data-action="save-add-member">추가</button>
@@ -156,7 +157,7 @@ function renderFamilyList() {
 function updateTopbarIdentity() {
   const member = Storage.getFamilyMember(AppState.memberId);
   const nameEl = document.getElementById("patientName");
-  if (nameEl) nameEl.textContent = member ? (member.relation || "구성원") : "";
+  if (nameEl) nameEl.textContent = member ? (member.nickname || member.relation || "구성원") : "";
 }
 
 function refreshFamilyIdentity() {
@@ -600,7 +601,8 @@ function bindFamilySwitch() {
     } else if (action === "save-add-member") {
       const form = actionEl.closest(".family-add-form");
       const relation = form.querySelector('[data-field="relation"]').value;
-      Storage.addFamilyMember({ relation });
+      const nickname = form.querySelector('[data-field="nickname"]').value.trim();
+      Storage.addFamilyMember({ relation, nickname });
       familyAddMode = false;
       renderFamilyList();
     }
