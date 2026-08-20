@@ -179,15 +179,21 @@ const LifeLogs = (() => {
       </span>`;
   }
 
-  const INTENSITY_LEVELS = ["낮음", "보통", "높음"];
+  const INTENSITY_LEVELS = ["하", "중", "상"];
 
   function exerciseTile(rec) {
     const isCustom = rec.exerciseType === "기타";
     const typeLabel = isCustom && rec.exerciseCustomLabel ? rec.exerciseCustomLabel : rec.exerciseType;
     return `
       <div class="metric tone-exercise metric-compact">
-        ${iconWithPicker("exercise", "exercise", "exerciseTypePicker", "운동 종류 선택",
-          typePicker("exerciseTypePicker", "exerciseType", EXERCISE_TYPES, rec.exerciseType))}
+        <div class="metric-head-row">
+          ${iconWithPicker("exercise", "exercise", "exerciseTypePicker", "운동 종류 선택",
+            typePicker("exerciseTypePicker", "exerciseType", EXERCISE_TYPES, rec.exerciseType))}
+          <div class="metric-intensity-inline">
+            <span class="metric-intensity-label">운동강도</span>
+            ${INTENSITY_LEVELS.map(lv => `<button type="button" class="type-chip mini${rec.exerciseIntensity === lv ? " active" : ""}" data-action="pickType" data-field="exerciseIntensity" data-value="${lv}">${lv}</button>`).join("")}
+          </div>
+        </div>
         <span class="metric-label">운동${typeLabel ? `<span class="metric-type-tag">${Storage.escapeHtml(typeLabel)}</span>` : ""}</span>
         ${isCustom ? `<input type="text" class="metric-custom-input" data-field="exerciseCustomLabel" value="${Storage.escapeHtml(rec.exerciseCustomLabel || "")}" placeholder="운동 이름 입력">` : ""}
         <span class="metric-duo">
@@ -200,10 +206,6 @@ const LifeLogs = (() => {
             <span class="metric-unit">분</span>
           </span>
         </span>
-        ${rec.exerciseType ? `
-        <div class="metric-intensity">
-          ${INTENSITY_LEVELS.map(lv => `<button type="button" class="type-chip mini${rec.exerciseIntensity === lv ? " active" : ""}" data-action="pickType" data-field="exerciseIntensity" data-value="${lv}">${lv}</button>`).join("")}
-        </div>` : ""}
       </div>`;
   }
 

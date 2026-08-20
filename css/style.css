@@ -983,6 +983,7 @@ button.metric-icon { cursor: pointer; }
   letter-spacing: -0.02em;
   color: var(--tone);
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 .metric-value input:focus { outline: none; }
 .metric-value input::placeholder { color: var(--muted-soft); }
@@ -1035,6 +1036,11 @@ button.metric-icon { cursor: pointer; }
 
 .metric-intensity { display: flex; gap: 6px; margin-top: -2px; }
 
+.metric-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.metric-intensity-inline { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.metric-intensity-label { font-size: 10.5px; color: var(--gray-soft); white-space: nowrap; margin-right: 2px; }
+.metric-intensity-inline .type-chip.mini { padding: 3px 7px; font-size: 11px; }
+
 .metric-type-select {
   width: 100%;
   border: 1px solid var(--border);
@@ -1051,7 +1057,7 @@ button.metric-icon { cursor: pointer; }
 .metric-duo { margin-top: auto; display: flex; align-items: baseline; gap: 14px; }
 .metric-duo-group { display: flex; align-items: baseline; gap: 4px; }
 .metric-duo-group input {
-  width: 40px;
+  width: 30px;
   min-width: 0;
   border: none;
   background: transparent;
@@ -1062,6 +1068,7 @@ button.metric-icon { cursor: pointer; }
   letter-spacing: -0.02em;
   color: var(--tone);
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 .metric-duo-group input:focus { outline: none; }
 .metric-duo-group input::placeholder { color: var(--muted-soft); }
