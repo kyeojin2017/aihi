@@ -99,8 +99,8 @@ const Storage = (() => {
     if (idx === -1) {
       const rec = {
         id: uid(), date, memberId,
-        meals: [], exerciseMin: null, sleepHours: null, waterMl: null,
-        alcohol: false, caffeineMg: null, isPeriodDay: false, memo: "",
+        meals: [], exerciseType: "", exerciseHours: null, exerciseMinutes: null, sleepHours: null, waterMl: null,
+        alcohol: false, caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
         createdAt: now, updatedAt: now,
         ...patch
       };
@@ -208,11 +208,14 @@ const Storage = (() => {
           { time: "12:40", memo: "미역국, 흰밥" },
           { time: "19:00", memo: "누룽지" }
         ],
-        exerciseMin: 20,
+        exerciseType: "걷기",
+        exerciseHours: 0,
+        exerciseMinutes: 20,
         sleepHours: 6.5,
         waterMl: 1200,
         alcohol: false,
-        caffeineMg: 0,
+        caffeineType: "",
+        caffeineCups: 0,
         isPeriodDay: false,
         memo: "미열로 산책만 짧게. 커피는 쉬었음."
       });

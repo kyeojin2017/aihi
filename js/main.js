@@ -24,7 +24,8 @@ function daysInMonth(year, month) {
 function hasLifeEntry(log) {
   return (log.meals && log.meals.length > 0) ||
     log.sleepHours != null || log.waterMl != null ||
-    log.exerciseMin != null || log.caffeineMg != null ||
+    log.exerciseHours != null || log.exerciseMinutes != null ||
+    log.caffeineCups != null ||
     log.alcohol === true || log.isPeriodDay === true ||
     (log.memo || "").trim() !== "";
 }
@@ -474,6 +475,18 @@ function bindLifeDateNav() {
   };
   document.getElementById("lifeDatePrev").addEventListener("click", () => shiftDay(-1));
   document.getElementById("lifeDateNext").addEventListener("click", () => shiftDay(1));
+
+  const picker = document.getElementById("lifeDatePicker");
+  document.getElementById("lifeDateBox").addEventListener("click", () => {
+    if (typeof picker.showPicker === "function") picker.showPicker();
+    else picker.focus();
+  });
+  picker.addEventListener("change", () => {
+    if (!picker.value) return;
+    const [y, m, d] = picker.value.split("-").map(Number);
+    AppState.selectedDate = new Date(y, m - 1, d);
+    window.refreshAll();
+  });
 }
 
 function bindCalendarNav() {

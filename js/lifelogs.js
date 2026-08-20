@@ -31,8 +31,8 @@ const LifeLogs = (() => {
   function current() {
     const dateKey = Storage.toDateKey(AppState.selectedDate);
     const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
-      meals: [], exerciseMin: null, sleepHours: null, waterMl: null,
-      alcohol: false, caffeineMg: null, isPeriodDay: false, memo: ""
+      meals: [], exerciseType: "", exerciseHours: null, exerciseMinutes: null, sleepHours: null, waterMl: null,
+      alcohol: false, caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
   }
@@ -62,8 +62,8 @@ const LifeLogs = (() => {
       save({ meals });
       return;
     }
-    if (field === "memo") {
-      save({ memo: el.value });
+    if (field === "memo" || field === "exerciseType" || field === "caffeineType") {
+      save({ [field]: el.value });
       return;
     }
     save({ [field]: numOrNull(el.value) });
@@ -144,6 +144,49 @@ const LifeLogs = (() => {
       </div>`;
   }
 
+  const EXERCISE_TYPES = ["걷기", "달리기", "자전거", "수영", "헬스", "요가", "등산", "기타"];
+  const CAFFEINE_TYPES = ["커피", "에너지드링크", "차", "탄산음료", "기타"];
+
+  function typeSelect(field, options, value, placeholder) {
+    return `
+      <select class="metric-type-select" data-field="${field}" aria-label="${placeholder}">
+        <option value=""${!value ? " selected" : ""}>${placeholder}</option>
+        ${options.map(o => `<option value="${o}"${value === o ? " selected" : ""}>${o}</option>`).join("")}
+      </select>`;
+  }
+
+  function exerciseTile(rec) {
+    return `
+      <div class="metric tone-exercise">
+        <span class="metric-icon">${icon("exercise")}</span>
+        <span class="metric-label">운동</span>
+        ${typeSelect("exerciseType", EXERCISE_TYPES, rec.exerciseType, "종류 선택")}
+        <span class="metric-duo">
+          <span class="metric-duo-group">
+            <input type="number" data-field="exerciseHours" value="${rec.exerciseHours ?? ""}" placeholder="0" step="1" min="0" aria-label="운동 시간">
+            <span class="metric-unit">시간</span>
+          </span>
+          <span class="metric-duo-group">
+            <input type="number" data-field="exerciseMinutes" value="${rec.exerciseMinutes ?? ""}" placeholder="0" step="5" min="0" max="59" aria-label="운동 분">
+            <span class="metric-unit">분</span>
+          </span>
+        </span>
+      </div>`;
+  }
+
+  function caffeineTile(rec) {
+    return `
+      <div class="metric tone-caffeine">
+        <span class="metric-icon">${icon("caffeine")}</span>
+        <span class="metric-label">카페인</span>
+        ${typeSelect("caffeineType", CAFFEINE_TYPES, rec.caffeineType, "음료 선택")}
+        <span class="metric-value">
+          <input type="number" data-field="caffeineCups" value="${rec.caffeineCups ?? ""}" placeholder="0" step="1" min="0" aria-label="카페인 잔 수">
+          <span class="metric-unit">잔</span>
+        </span>
+      </div>`;
+  }
+
   function renderMeals(rec) {
     const meals = rec.meals || [];
     if (meals.length === 0) {
@@ -168,6 +211,7 @@ const LifeLogs = (() => {
     const d = AppState.selectedDate;
     document.getElementById("lifeDate").textContent =
       `${d.getMonth() + 1}월 ${d.getDate()}일 기록`;
+    document.getElementById("lifeDatePicker").value = dateKey;
 
     const water = rec.waterMl || 0;
     const waterPct = Math.min(100, Math.round((water / WATER_GOAL) * 100));
@@ -189,14 +233,8 @@ const LifeLogs = (() => {
               <button type="button" data-action="water" data-delta="${WATER_STEP}" aria-label="250ml 더하기">+</button>
             </div>`
         })}
-        ${metricTile({
-          tone: "exercise", name: "exercise", label: "운동", unit: "분",
-          value: rec.exerciseMin, field: "exerciseMin", step: "5", min: "0"
-        })}
-        ${metricTile({
-          tone: "caffeine", name: "caffeine", label: "카페인", unit: "mg",
-          value: rec.caffeineMg, field: "caffeineMg", step: "10", min: "0"
-        })}
+        ${exerciseTile(rec)}
+        ${caffeineTile(rec)}
       </div>
 
       <div class="card life-card">
@@ -204,23 +242,32 @@ const LifeLogs = (() => {
           <span class="section-icon tone-meal">${icon("meal")}</span>
           <span class="section-title">식사</span>
           <span class="section-count">${(rec.meals || []).length}끼</span>
-          <button type="button" class="chip-btn" data-action="addMeal">+ 추가</button>
+          <span class="section-actions">
+            <button type="button" class="flag tone-alcohol${rec.alcohol ? " on" : ""}" data-action="toggleAlcohol">
+              <span class="flag-icon">${icon("alcohol")}</span>음주
+            </button>
+            <button type="button" class="chip-btn" data-action="addMeal">+ 추가</button>
+          </span>
         </div>
         <div class="meal-list">${renderMeals(rec)}</div>
       </div>
 
       <div class="card life-card">
         <div class="section-head">
-          <span class="section-icon tone-caffeine">${icon("status")}</span>
-          <span class="section-title">오늘의 상태</span>
+          <span class="section-icon tone-period">${icon("period")}</span>
+          <span class="section-title">월경</span>
         </div>
         <div class="flag-row">
-          <button type="button" class="flag tone-alcohol${rec.alcohol ? " on" : ""}" data-action="toggleAlcohol">
-            <span class="flag-icon">${icon("alcohol")}</span>음주
-          </button>
           <button type="button" class="flag tone-period${rec.isPeriodDay ? " on" : ""}" data-action="togglePeriod">
-            <span class="flag-icon">${icon("period")}</span>월경
+            <span class="flag-icon">${icon("period")}</span>오늘 월경일
           </button>
+        </div>
+      </div>
+
+      <div class="card life-card">
+        <div class="section-head">
+          <span class="section-icon tone-caffeine">${icon("status")}</span>
+          <span class="section-title">메모</span>
         </div>
         <textarea class="life-memo" data-field="memo"
           placeholder="컨디션, 특이사항을 적어두세요">${Storage.escapeHtml(rec.memo || "")}</textarea>
