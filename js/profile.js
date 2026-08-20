@@ -136,7 +136,7 @@ const Profile = (() => {
 
     container.innerHTML = `
       <div class="card-head">
-        <div class="card-head-left"><span class="card-title" style="font-size:15px;">${cfg.title}</span></div>
+        <div class="card-head-left"><span class="card-title" style="font-size:18px;">${cfg.title}</span></div>
         <span class="card-link" data-action="add" data-type="${type}">${cfg.addLabel}</span>
       </div>
       <div class="simple-list">
