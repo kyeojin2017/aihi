@@ -367,6 +367,34 @@ async function renderTodayRx() {
     </div>`).join("");
 }
 
+async function renderSideCheckupSummary() {
+  const el = document.getElementById("sideCheckupList");
+  if (!el) return;
+
+  const all = await Storage.getCheckups(AppState.memberId);
+  if (!all.length) {
+    el.innerHTML = `<div class="symptom-hint">등록된 접종·검진이 없습니다.</div>`;
+    return;
+  }
+
+  const upcoming = all.filter(c => c.status !== "완료").sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const completed = all.filter(c => c.status === "완료").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const rows = [...upcoming, ...completed].slice(0, 5);
+
+  el.innerHTML = rows.map(c => {
+    const badgeClass = c.type === "screening" ? "badge-blue" : "badge-green";
+    const badgeLabel = c.category || (c.type === "screening" ? "검진" : "접종");
+    const isUpcoming = c.status !== "완료";
+    const dateText = c.date ? (isUpcoming ? `예정 ${formatMonthDay(c.date)}` : formatDateFull(c.date).slice(0, 7)) : "-";
+    return `
+      <div class="vaccine-item">
+        <span class="badge ${badgeClass}">${Storage.escapeHtml(badgeLabel)}</span>
+        <span class="vaccine-name">${Storage.escapeHtml(c.name || "")}</span>
+        <span class="vaccine-date${isUpcoming ? " upcoming" : ""}">${Storage.escapeHtml(dateText)}</span>
+      </div>`;
+  }).join("");
+}
+
 function bindTodayRecordActions() {
   document.getElementById("addVisitTodayBtn").addEventListener("click", () => {
     goToTab("visit");
@@ -598,6 +626,7 @@ window.refreshAll = async function refreshAll() {
   await renderUpcomingBanner();
   await renderTodayVisits();
   await renderTodayRx();
+  await renderSideCheckupSummary();
   if (window.recordViewMode === "list") await renderRecordList();
   if (currentView === "visit") await Visits.render();
   if (currentView === "rx") await Prescriptions.render();
@@ -849,6 +878,7 @@ window.initApp = async function initApp() {
   await renderUpcomingBanner();
   await renderTodayVisits();
   await renderTodayRx();
+  await renderSideCheckupSummary();
   await refreshFamilyIdentity();
   await Symptoms.render();
   if (!boundOnce) {
