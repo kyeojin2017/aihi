@@ -138,14 +138,19 @@ const Report = (() => {
         <div class="dept-title">진료과별 방문 횟수</div>
         ${rows.length ? `
         <div class="report-detail-list">
-          ${rows.map(r => `<div class="report-detail-row"><span class="report-detail-text">${Storage.escapeHtml(r.name)}</span><span class="report-detail-count">${r.count}회</span></div>`).join("")}
+          ${rows.map(r => `<div class="report-detail-row symptom-row"><span class="symptom-pill">${Storage.escapeHtml(r.name)}</span><span class="report-detail-count">${r.count}회</span></div>`).join("")}
         </div>` : `<div class="symptom-hint">방문 기록이 없습니다.</div>`}
       </div>
       <div class="report-detail">
         <div class="dept-title">방문 날짜 · 병원</div>
         ${visits.length ? `
-        <div class="report-detail-list">
-          ${visits.map(v => `<div class="report-detail-row"><span class="report-detail-date">${Storage.escapeHtml(formatMonthDay(v.date))}</span><span class="report-detail-text">${Storage.escapeHtml(v.hospital)}${v.department ? ` <span class="report-detail-tag">${Storage.escapeHtml(v.department)}</span>` : ""}</span></div>`).join("")}
+        <div class="report-detail-boxes">
+          ${visits.map(v => `
+            <div class="report-detail-box">
+              <span class="report-detail-date">${Storage.escapeHtml(formatMonthDay(v.date))}</span>
+              <span class="report-detail-text">${Storage.escapeHtml(v.hospital)}</span>
+              ${v.department ? `<span class="report-detail-tag">${Storage.escapeHtml(v.department)}</span>` : ""}
+            </div>`).join("")}
         </div>` : `<div class="symptom-hint">방문 기록이 없습니다.</div>`}
       </div>`;
   }
