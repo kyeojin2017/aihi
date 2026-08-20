@@ -47,9 +47,13 @@ const Prescriptions = (() => {
     const all = Storage.getPrescriptions(AppState.memberId)
       .slice()
       .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+    const selectedDateKey = Storage.toDateKey(AppState.selectedDate);
+    const isDailyView = window.recordViewMode === "daily";
     const filtered = AppState.rxFilterMonth
       ? all.filter(p => (p.startDate || "").startsWith(AppState.rxFilterMonth))
-      : all;
+      : isDailyView
+        ? all.filter(p => p.startDate && selectedDateKey >= p.startDate && selectedDateKey <= (p.endDate || p.startDate))
+        : all;
 
     document.getElementById("rxCount").textContent = `${all.length}건`;
 
@@ -68,7 +72,9 @@ const Prescriptions = (() => {
       .join("");
 
     if (!formHtml && filtered.length === 0) {
-      const emptyMsg = AppState.rxFilterMonth ? "이 달에 처방전 기록이 없습니다." : "아직 처방전 기록이 없습니다.";
+      const emptyMsg = AppState.rxFilterMonth ? "이 달에 처방전 기록이 없습니다."
+        : isDailyView ? "이 날짜에 복용 중인 처방전이 없습니다."
+        : "아직 처방전 기록이 없습니다.";
       listEl.innerHTML = `<div class="empty-state"><p>${emptyMsg}</p></div>`;
     } else {
       listEl.innerHTML = formHtml + itemsHtml;

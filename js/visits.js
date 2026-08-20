@@ -61,9 +61,12 @@ const Visits = (() => {
 
     const all = Storage.getVisits().filter(v => v.memberId === AppState.memberId);
     const calendarYear = window.calendarState ? String(window.calendarState.year) : null;
+    const selectedDateKey = Storage.toDateKey(AppState.selectedDate);
+    const isDailyView = window.recordViewMode === "daily";
     let filtered = all;
     if (AppState.visitFilterDate) filtered = all.filter(v => v.date === AppState.visitFilterDate);
     else if (AppState.visitFilterMonth) filtered = all.filter(v => (v.date || "").startsWith(AppState.visitFilterMonth));
+    else if (isDailyView) filtered = all.filter(v => v.date === selectedDateKey);
     else if (calendarYear) filtered = all.filter(v => (v.date || "").startsWith(calendarYear));
     const sorted = filtered.slice().sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
 
@@ -89,6 +92,7 @@ const Visits = (() => {
     if (!formHtml && sorted.length === 0) {
       const emptyMsg = AppState.visitFilterDate ? "이 날짜에 병원 방문 기록이 없습니다."
         : AppState.visitFilterMonth ? "이 달에 병원 방문 기록이 없습니다."
+        : isDailyView ? "이 날짜에 병원 방문 기록이 없습니다."
         : calendarYear ? `${calendarYear}년에 병원 방문 기록이 없습니다.`
         : "아직 병원 방문 기록이 없습니다.";
       listEl.innerHTML = `<div class="empty-state"><p>${emptyMsg}</p></div>`;

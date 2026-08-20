@@ -182,7 +182,7 @@ function computeUpcoming(memberId) {
   const items = [];
 
   Storage.getCheckups(memberId).forEach(c => {
-    if (!c.date) return;
+    if (!c.date || c.status === "완료") return;
     const days = Math.round((new Date(c.date) - today) / 86400000);
     if (days >= -14 && days <= 60) items.push({ label: c.name || "접종·검진", date: c.date, days });
   });
@@ -219,7 +219,7 @@ function renderUpcomingBanner() {
     </div>`;
 }
 
-let recordViewMode = "daily";
+window.recordViewMode = "daily";
 
 function renderRecordList() {
   const el = document.getElementById("recordBodyList");
@@ -536,10 +536,13 @@ function bindRecordViewToggle() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".view-toggle button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      recordViewMode = btn.dataset.view;
-      document.getElementById("recordBodyDaily").style.display = recordViewMode === "daily" ? "flex" : "none";
-      document.getElementById("recordBodyList").style.display = recordViewMode === "list" ? "flex" : "none";
-      if (recordViewMode === "list") renderRecordList();
+      window.recordViewMode = btn.dataset.view;
+      AppState.visitFilterDate = null;
+      AppState.visitFilterMonth = null;
+      AppState.rxFilterMonth = null;
+      document.getElementById("recordBodyDaily").style.display = window.recordViewMode === "daily" ? "flex" : "none";
+      document.getElementById("recordBodyList").style.display = window.recordViewMode === "list" ? "flex" : "none";
+      window.refreshAll();
     });
   });
 }
@@ -578,7 +581,7 @@ window.refreshAll = function refreshAll() {
   Symptoms.render();
   renderTodayVisits();
   renderTodayRx();
-  if (recordViewMode === "list") renderRecordList();
+  if (window.recordViewMode === "list") renderRecordList();
   if (currentView === "visit") Visits.render();
   if (currentView === "rx") Prescriptions.render();
   if (currentView === "checkup") Checkups.render();

@@ -40,7 +40,7 @@ const Checkups = (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const upcoming = all
-      .filter(c => c.date)
+      .filter(c => c.date && c.status !== "완료")
       .map(c => ({ ...c, days: Math.round((new Date(c.date) - today) / 86400000) }))
       .filter(c => c.days >= 0 && c.days <= 60)
       .sort((a, b) => a.days - b.days);
