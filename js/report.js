@@ -199,6 +199,31 @@ const Report = (() => {
     return "";
   }
 
+  function buildNarrativeSummary(memberId, year, month, periodLabel) {
+    const summary = computeSummary(memberId, year, month);
+    const deptRows = computeDeptBreakdown(memberId, year, month);
+    const symptomStats = computeSymptomBreakdown(memberId, year, month);
+    const checkups = computeCheckupList(memberId, year, month);
+    const periodPhrase = month === null ? `${year}년 한 해 동안` : `${periodLabel} 한 달간`;
+
+    const deptNames = deptRows.map(r => r.name);
+    const deptText = deptNames.length ? `${deptNames.slice(0, 2).join(", ")} 등 ` : "";
+    const visitSentence = summary.visitCount > 0
+      ? `${periodPhrase} ${deptText}총 ${summary.visitCount}회 병원을 다녀왔으며, ${summary.prescriptionCount}회의 약을 처방받았습니다.`
+      : `${periodPhrase}에는 병원 방문 기록이 없습니다.`;
+
+    const topSymptoms = symptomStats.tagRows.slice(0, 3).map(r => r.name);
+    const symptomSentence = topSymptoms.length
+      ? `주로 ${topSymptoms.join(", ")} 증상을 겪었습니다.`
+      : `기록된 증상은 없었습니다.`;
+
+    const checkupSentence = checkups.length
+      ? `이 기간에는 건강검진·접종 기록이 ${checkups.length}건 있습니다.`
+      : `그리고 이 기간에는 건강검진 및 접종 기록은 없습니다.`;
+
+    return `${visitSentence} ${symptomSentence} ${checkupSentence}`;
+  }
+
   function render() {
     const el = document.getElementById("reportBody");
     if (!el) return;
@@ -208,6 +233,7 @@ const Report = (() => {
     const month = period === "month" ? calendarState.month : null;
     const summary = computeSummary(memberId, year, month);
     const periodLabel = period === "month" ? `${month + 1}월` : `${year}년`;
+    const narrative = buildNarrativeSummary(memberId, year, month, periodLabel);
 
     document.querySelectorAll("#reportPeriodToggle button").forEach(b => {
       b.classList.toggle("active", b.dataset.period === period);
@@ -222,6 +248,10 @@ const Report = (() => {
           <div class="stat-card"><span class="stat-label">증상 기록</span><button type="button" class="stat-value${activeDetail === "symptom" ? " active" : ""}" data-action="toggleDetail" data-stat="symptom">${summary.symptomDays}<span class="stat-unit">일</span></button></div>
           <div class="stat-card"><span class="stat-label">접종 · 검진</span><button type="button" class="stat-value${activeDetail === "checkup" ? " active" : ""}" data-action="toggleDetail" data-stat="checkup">${summary.checkupCount}<span class="stat-unit">건</span></button></div>
         </div>
+      </div>
+      <div class="report-narrative">
+        <div class="dept-title">총 통계</div>
+        <p class="report-narrative-text">${Storage.escapeHtml(narrative)}</p>
       </div>
       ${renderDetail(memberId, year, month)}`;
   }
