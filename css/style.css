@@ -1000,6 +1000,11 @@ button.stat-value.active { color: var(--primary); }
   border: 1px solid var(--border);
   border-radius: 12px;
 }
+.empty-state.small { min-height: 0; padding: 20px 0; }
+
+.checkup-group { display: flex; flex-direction: column; gap: 12px; }
+.checkup-group-head { display: flex; align-items: center; justify-content: space-between; }
+.checkup-group-count { font-size: 13px; color: var(--muted); font-weight: 600; }
 
 /* ---- Top-level sections (개인정보 / 건강일기 / 생활 바이오리듬) ---- */
 .top-section { display: flex; flex-direction: column; flex: 1; min-height: 0; }

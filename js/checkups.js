@@ -1,5 +1,6 @@
 const Checkups = (() => {
   let formMode = null; // null | "add" | { edit: id }
+  let selectedYear = new Date().getFullYear();
 
   function init() {
     document.getElementById("addCheckupBtn").addEventListener("click", () => {
@@ -7,6 +8,10 @@ const Checkups = (() => {
       render();
     });
     document.getElementById("checkupList").addEventListener("click", onListClick);
+    document.getElementById("checkupYearSelect").addEventListener("change", e => {
+      selectedYear = Number(e.target.value);
+      render();
+    });
   }
 
   function refresh() {
@@ -58,28 +63,51 @@ const Checkups = (() => {
       </div>`;
   }
 
+  function populateYearSelect(allRaw) {
+    const select = document.getElementById("checkupYearSelect");
+    if (!select) return;
+    const years = new Set(allRaw.filter(c => c.date).map(c => Number(c.date.slice(0, 4))));
+    years.add(selectedYear);
+    years.add(new Date().getFullYear());
+    const sorted = Array.from(years).sort((a, b) => b - a);
+    select.innerHTML = sorted.map(y => `<option value="${y}"${y === selectedYear ? " selected" : ""}>${y}년</option>`).join("");
+  }
+
+  function renderGroup(title, badgeClass, items, emptyMsg) {
+    return `
+      <div class="checkup-group">
+        <div class="checkup-group-head">
+          <span class="badge ${badgeClass}">${title}</span>
+          <span class="checkup-group-count">${items.length}건</span>
+        </div>
+        ${items.length ? items.map(renderCard).join("") : `<div class="empty-state small"><p>${emptyMsg}</p></div>`}
+      </div>`;
+  }
+
   function render() {
     const listEl = document.getElementById("checkupList");
     if (!listEl) return;
 
-    const all = Storage.getCheckups(AppState.memberId)
-      .slice()
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    const allRaw = Storage.getCheckups(AppState.memberId).slice();
+    populateYearSelect(allRaw);
 
-    document.getElementById("checkupCount").textContent = `${all.length}건`;
-    renderUpcomingBanner(all);
+    document.getElementById("checkupCount").textContent = `${allRaw.length}건`;
+    renderUpcomingBanner(allRaw);
+
+    const all = allRaw
+      .filter(c => c.date && Number(c.date.slice(0, 4)) === selectedYear)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .filter(c => !(formMode && typeof formMode === "object" && formMode.edit === c.id));
+
+    const screenings = all.filter(c => c.type === "screening");
+    const vaccines = all.filter(c => c.type !== "screening");
 
     const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findCheckup(formMode.edit) : null) : "";
-    const itemsHtml = all
-      .filter(c => !(formMode && typeof formMode === "object" && formMode.edit === c.id))
-      .map(renderCard)
-      .join("");
+    const groupsHtml =
+      renderGroup("건강검진", "badge-blue", screenings, `${selectedYear}년에 건강검진 기록이 없습니다.`) +
+      renderGroup("예방접종", "badge-green", vaccines, `${selectedYear}년에 예방접종 기록이 없습니다.`);
 
-    if (!formHtml && all.length === 0) {
-      listEl.innerHTML = `<div class="empty-state"><p>아직 접종·검진 기록이 없습니다.</p></div>`;
-    } else {
-      listEl.innerHTML = formHtml + itemsHtml;
-    }
+    listEl.innerHTML = formHtml + groupsHtml;
   }
 
   function renderCard(c) {
