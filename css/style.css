@@ -821,32 +821,32 @@ button.stat-value.active { color: var(--primary); }
 .period-projection-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
+  gap: 10px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-soft);
+  margin-bottom: 12px;
 }
 .period-year-nav {
   border: 1px solid var(--border);
   background: #fff;
   color: var(--muted);
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
 }
 .period-year-nav:hover { border-color: #AE5480; color: #AE5480; }
 .period-projection-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
 .period-projection-col { display: flex; flex-direction: column; }
 .period-projection-row { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; height: 26px; }
-.period-projection-month { width: 46px; flex: 0 0 auto; color: var(--gray-soft); }
+.period-projection-month { width: 58px; flex: 0 0 auto; color: var(--gray-soft); white-space: nowrap; }
 .period-projection-date { color: var(--text-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
 .period-projection-date.empty { color: var(--muted-soft); font-weight: 400; }
 .period-projection-tag { font-size: 10.5px; font-weight: 500; color: #AE5480; background: #FAEAF2; border-radius: 999px; padding: 2px 8px; margin-left: 8px; }
