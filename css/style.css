@@ -399,7 +399,9 @@ a:hover { color: var(--primary-dark); }
   border-radius: 10px;
   background: var(--panel-bg);
 }
-.report-narrative-text { margin-top: 8px; font-size: 14.5px; line-height: 1.7; color: var(--text-soft); }
+.report-narrative-text { margin-top: 8px; font-size: 17px; line-height: 1.7; color: var(--text-soft); }
+.report-narrative-text p { margin: 0 0 8px; }
+.report-narrative-text p:last-child { margin-bottom: 0; }
 
 .content-grid {
   flex: 1;
@@ -822,7 +824,7 @@ button.stat-value.active { color: var(--primary); }
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-soft);
   margin-bottom: 12px;
@@ -1200,10 +1202,12 @@ button.metric-icon { cursor: pointer; }
 .metric-value input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .metric-unit { font-size: 13.5px; color: var(--gray-soft); flex: 0 0 auto; }
 .tone-sleep .metric-value input,
-.tone-caffeine .metric-value input { font-size: 39px; }
+.tone-caffeine .metric-value input,
+.tone-water .metric-value input { font-size: 52px; }
 .tone-sleep .metric-unit,
 .tone-caffeine .metric-unit,
-.tone-exercise .metric-unit { font-size: 20px; }
+.tone-exercise .metric-unit,
+.tone-water .metric-unit { font-size: 26px; }
 
 .type-picker {
   display: none;
@@ -1279,20 +1283,20 @@ button.metric-icon { cursor: pointer; }
 .metric-duo-display:hover { background: rgba(0,0,0,0.04); }
 .metric-duo-display-value {
   font-family: inherit;
-  font-size: 39px;
+  font-size: 52px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);
   font-variant-numeric: tabular-nums;
 }
 .metric-duo-group input {
-  width: 60px;
+  width: 74px;
   min-width: 0;
   border: none;
   background: transparent;
   padding: 0;
   font-family: inherit;
-  font-size: 39px;
+  font-size: 52px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--tone);

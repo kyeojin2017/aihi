@@ -102,7 +102,7 @@ const Storage = (() => {
         meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
         sleepHours: null, waterMl: null,
         alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
-        caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
+        caffeineType: "", caffeineCustomLabel: "", caffeineCups: null, isPeriodDay: false, memo: "",
         createdAt: now, updatedAt: now,
         ...patch
       };
@@ -216,6 +216,20 @@ const Storage = (() => {
   const supplementsStore = makeList("supplements");
   const prescriptionsStore = makeList("prescriptions");
   const checkupsStore = makeList("checkups");
+  const periodEntriesStore = makeList("periodEntries");
+
+  // 실제로 입력한 생리 시작일만 기록 — 같은 날짜가 이미 있으면 건너뛴다
+  function recordPeriodEntry(memberId, date) {
+    if (!date) return;
+    const exists = periodEntriesStore.getAll(memberId).some(e => e.date === date);
+    if (!exists) periodEntriesStore.add(memberId, { date });
+  }
+
+  function deletePeriodEntry(memberId, date) {
+    if (!date) return;
+    const match = periodEntriesStore.getAll(memberId).find(e => e.date === date);
+    if (match) periodEntriesStore.remove(match.id);
+  }
 
   function seedIfEmpty() {
     if (getVisits().length === 0) {
@@ -321,6 +335,9 @@ const Storage = (() => {
     getSymptoms, getSymptom, saveSymptom,
     getLifeLogs, getLifeLog, saveLifeLog,
     getPeriodSettings, savePeriodSettings,
+    getPeriodEntries: periodEntriesStore.getAll,
+    recordPeriodEntry,
+    deletePeriodEntry,
     getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember, reorderFamilyMembers,
     getConditions: conditionsStore.getAll,
     addCondition: conditionsStore.add,

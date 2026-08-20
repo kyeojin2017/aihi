@@ -415,6 +415,15 @@ function searchRecords(query) {
 
   const matches = text => keywords.every(k => text.toLowerCase().includes(k));
 
+  // 검색어가 실제 진단명(진료 메모)과 일치하면 그 병명으로 진단받은 병원방문 기록만 보여준다
+  const diagnosisMatches = Storage.getVisits()
+    .filter(v => v.memberId === memberId && v.diagnosisMemo && matches(v.diagnosisMemo))
+    .map(v => ({ type: "visit", date: v.date, text: `<strong>${Storage.escapeHtml(v.hospital || "")}</strong>${v.department ? ` · ${Storage.escapeHtml(v.department)}` : ""}` }));
+  if (diagnosisMatches.length) {
+    diagnosisMatches.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    return diagnosisMatches.slice(0, 20);
+  }
+
   Storage.getVisits().filter(v => v.memberId === memberId).forEach(v => {
     const blob = [v.hospital, v.department, v.doctor, v.diagnosisMemo].filter(Boolean).join(" ");
     if (matches(blob)) {

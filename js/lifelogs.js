@@ -3,6 +3,7 @@ const LifeLogs = (() => {
   const WATER_GOAL = 2000;
   let editingExerciseCustom = false;
   let editingExerciseDuration = false;
+  let editingCaffeineCustom = false;
   let mealsVisible = true;
   let draggingAlcohol = false;
   let periodProjectionYear = null;
@@ -72,7 +73,7 @@ const LifeLogs = (() => {
       meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
       sleepHours: null, waterMl: null,
       alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
-      caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: ""
+      caffeineType: "", caffeineCustomLabel: "", caffeineCups: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
   }
@@ -125,20 +126,16 @@ const LifeLogs = (() => {
     return new Date(y, m - 1, d + Number(cycleLength));
   }
 
-  function computePeriodYearProjection(settings, year) {
+  function computePeriodYearProjection(memberId, year, currentStartDate) {
     const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, day: null, isCurrent: false }));
-    if (!settings || !settings.startDate) return months;
-    const cycleLength = settings.cycleLength || 28;
-    const [sy, sm, sd] = settings.startDate.split("-").map(Number);
-    const start = new Date(sy, sm - 1, sd);
-    for (let n = -30; n <= 30; n++) {
-      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + cycleLength * n);
-      if (d.getFullYear() === year) {
-        const idx = d.getMonth();
-        months[idx].day = d.getDate();
-        months[idx].isCurrent = n === 0;
-      }
-    }
+    const entries = Storage.getPeriodEntries(memberId);
+    entries.forEach(en => {
+      if (!en.date) return;
+      const [ey, em, ed] = en.date.split("-").map(Number);
+      if (ey !== year) return;
+      months[em - 1].day = ed;
+      if (en.date === currentStartDate) months[em - 1].isCurrent = true;
+    });
     return months;
   }
 
@@ -165,7 +162,12 @@ const LifeLogs = (() => {
     if (field === "periodStartDate" || field === "periodLength" || field === "cycleLength") {
       const key = field === "periodStartDate" ? "startDate" : field;
       const value = field === "periodStartDate" ? (el.value || null) : numOrNull(el.value);
+      if (field === "periodStartDate" && !value) {
+        const prevSettings = Storage.getPeriodSettings(AppState.memberId);
+        if (prevSettings && prevSettings.startDate) Storage.deletePeriodEntry(AppState.memberId, prevSettings.startDate);
+      }
       Storage.savePeriodSettings(AppState.memberId, { [key]: value });
+      if (field === "periodStartDate" && value) Storage.recordPeriodEntry(AppState.memberId, value);
       if (typeof window.refreshAll === "function") window.refreshAll();
       else render();
       return;
@@ -194,6 +196,11 @@ const LifeLogs = (() => {
     }
     if (field === "exerciseCustomLabel") {
       editingExerciseCustom = !el.value.trim();
+      save({ [field]: el.value });
+      return;
+    }
+    if (field === "caffeineCustomLabel") {
+      editingCaffeineCustom = !el.value.trim();
       save({ [field]: el.value });
       return;
     }
@@ -257,6 +264,14 @@ const LifeLogs = (() => {
         } else {
           patch.exerciseCustomLabel = "";
           editingExerciseCustom = false;
+        }
+      }
+      if (el.dataset.field === "caffeineType") {
+        if (el.dataset.value === "기타") {
+          editingCaffeineCustom = true;
+        } else {
+          patch.caffeineCustomLabel = "";
+          editingCaffeineCustom = false;
         }
       }
       save(patch);
@@ -466,11 +481,16 @@ const LifeLogs = (() => {
   }
 
   function caffeineTile(rec) {
+    const isCustom = rec.caffeineType === "기타";
+    if (!isCustom) editingCaffeineCustom = false;
+    const typeLabel = isCustom && rec.caffeineCustomLabel ? rec.caffeineCustomLabel : rec.caffeineType;
+    const showCustomInput = isCustom && (editingCaffeineCustom || !rec.caffeineCustomLabel);
     return `
       <div class="metric tone-caffeine metric-compact">
         ${iconWithPicker("caffeine", "caffeine", "caffeineTypePicker", "카페인 음료 종류 선택",
           typePicker("caffeineTypePicker", "caffeineType", CAFFEINE_TYPES, rec.caffeineType))}
-        <span class="metric-label">카페인${rec.caffeineType ? `<span class="metric-type-tag">${Storage.escapeHtml(rec.caffeineType)}</span>` : ""}</span>
+        <span class="metric-label">카페인${typeLabel ? `<span class="metric-type-tag">${Storage.escapeHtml(typeLabel)}</span>` : ""}</span>
+        ${showCustomInput ? `<input type="text" class="metric-custom-input" data-field="caffeineCustomLabel" value="${Storage.escapeHtml(rec.caffeineCustomLabel || "")}" placeholder="음료 이름 입력">` : ""}
         <span class="metric-value">
           <input type="number" data-field="caffeineCups" value="${rec.caffeineCups ?? ""}" placeholder="0" step="1" min="0" aria-label="카페인 잔 수">
           <span class="metric-unit">잔</span>
@@ -581,7 +601,7 @@ const LifeLogs = (() => {
     const settings = Storage.getPeriodSettings(AppState.memberId) || {};
     const nextDate = computeNextPeriodDate(settings);
     const year = periodProjectionYear ?? defaultPeriodProjectionYear(settings);
-    const yearMonths = computePeriodYearProjection(settings, year);
+    const yearMonths = computePeriodYearProjection(AppState.memberId, year, settings.startDate);
     return `
       <div class="card life-card">
         <div class="section-head">

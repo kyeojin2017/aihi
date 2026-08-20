@@ -221,7 +221,7 @@ const Report = (() => {
       ? `이 기간에는 건강검진·접종 기록이 ${checkups.length}건 있습니다.`
       : `그리고 이 기간에는 건강검진 및 접종 기록은 없습니다.`;
 
-    return `${visitSentence} ${symptomSentence} ${checkupSentence}`;
+    return [visitSentence, symptomSentence, checkupSentence];
   }
 
   function render() {
@@ -250,8 +250,8 @@ const Report = (() => {
         </div>
       </div>
       <div class="report-narrative">
-        <div class="dept-title">총 통계</div>
-        <p class="report-narrative-text">${Storage.escapeHtml(narrative)}</p>
+        <div class="dept-title">이달의 건강</div>
+        <div class="report-narrative-text">${narrative.map(line => `<p>${Storage.escapeHtml(line)}</p>`).join("")}</div>
       </div>
       ${renderDetail(memberId, year, month)}`;
   }
