@@ -119,6 +119,7 @@ function renderSummaryPanel() {
 }
 
 let familyAddMode = false;
+const MAX_FAMILY_MEMBERS = 5;
 
 function countMemberRecords(memberId) {
   return Storage.getVisits().filter(v => v.memberId === memberId).length
@@ -139,7 +140,8 @@ function renderFamilyList() {
       <span class="family-count">${countMemberRecords(m.id)}건</span>
     </div>`).join("");
 
-  const addHtml = familyAddMode ? `
+  const atLimit = members.length >= MAX_FAMILY_MEMBERS;
+  const addHtml = familyAddMode && !atLimit ? `
     <div class="family-add-form">
       <select class="field-box" data-field="relation">
         ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
@@ -149,7 +151,9 @@ function renderFamilyList() {
         <button type="button" class="btn" data-action="cancel-add-member">취소</button>
         <button type="button" class="btn btn-primary" data-action="save-add-member">추가</button>
       </div>
-    </div>` : `<div class="family-item family-add" data-action="open-add-member"><span class="family-avatar">+</span>구성원 추가</div>`;
+    </div>` : atLimit
+    ? `<div class="family-item family-add-disabled">최대 ${MAX_FAMILY_MEMBERS}명까지 등록할 수 있습니다</div>`
+    : `<div class="family-item family-add" data-action="open-add-member"><span class="family-avatar">+</span>구성원 추가</div>`;
 
   el.innerHTML = itemsHtml + addHtml;
 }
@@ -709,12 +713,18 @@ function bindFamilySwitch() {
     const action = actionEl.dataset.action;
 
     if (action === "open-add-member") {
+      if (Storage.getFamilyMembers().length >= MAX_FAMILY_MEMBERS) return;
       familyAddMode = true;
       renderFamilyList();
     } else if (action === "cancel-add-member") {
       familyAddMode = false;
       renderFamilyList();
     } else if (action === "save-add-member") {
+      if (Storage.getFamilyMembers().length >= MAX_FAMILY_MEMBERS) {
+        familyAddMode = false;
+        renderFamilyList();
+        return;
+      }
       const form = actionEl.closest(".family-add-form");
       const relation = form.querySelector('[data-field="relation"]').value;
       const nickname = form.querySelector('[data-field="nickname"]').value.trim();
