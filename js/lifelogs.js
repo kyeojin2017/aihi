@@ -114,15 +114,21 @@ const LifeLogs = (() => {
     return new Date(y, m - 1, d + Number(cycleLength));
   }
 
-  function computePeriodProjection(settings, count) {
-    if (!settings || !settings.startDate) return [];
+  function computePeriodYearProjection(settings, year) {
+    const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, day: null, isCurrent: false }));
+    if (!settings || !settings.startDate) return months;
     const cycleLength = settings.cycleLength || 28;
-    const [y, m, d] = settings.startDate.split("-").map(Number);
-    const dates = [];
-    for (let i = 0; i < count; i++) {
-      dates.push(new Date(y, m - 1, d + cycleLength * i));
+    const [sy, sm, sd] = settings.startDate.split("-").map(Number);
+    const start = new Date(sy, sm - 1, sd);
+    for (let n = -30; n <= 30; n++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + cycleLength * n);
+      if (d.getFullYear() === year) {
+        const idx = d.getMonth();
+        months[idx].day = d.getDate();
+        months[idx].isCurrent = n === 0;
+      }
     }
-    return dates;
+    return months;
   }
 
   function formatMonthDay(date) {
@@ -527,6 +533,7 @@ const LifeLogs = (() => {
           ${iconWithPicker("alcohol", "alcohol", "alcoholTypePicker", "음주 종류 선택",
             multiTypePicker("alcoholTypePicker", ALCOHOL_TYPES, selectedTypes))}
           <span class="metric-label">음주 종류</span>
+          <button type="button" class="alcohol-remove" data-action="toggleAlcohol" aria-label="음주 기록 삭제">✕</button>
         </div>
         ${entries.length
           ? `<div class="alcohol-entries">${entries.map(renderAlcoholEntryRow).join("")}</div>`
@@ -538,10 +545,19 @@ const LifeLogs = (() => {
       </div>`;
   }
 
+  function renderPeriodRow(m) {
+    return `
+      <div class="period-projection-row">
+        <span class="period-projection-month">${m.month}월</span>
+        ${m.day ? `<span class="period-projection-date">${m.day}일</span>${m.isCurrent ? `<span class="period-projection-tag">현재</span>` : ""}` : ""}
+      </div>`;
+  }
+
   function renderPeriodCard(rec) {
     const settings = Storage.getPeriodSettings(AppState.memberId) || {};
     const nextDate = computeNextPeriodDate(settings);
-    const projection = computePeriodProjection(settings, 6);
+    const year = settings.startDate ? Number(settings.startDate.split("-")[0]) : new Date().getFullYear();
+    const yearMonths = computePeriodYearProjection(settings, year);
     return `
       <div class="card life-card">
         <div class="section-head">
@@ -563,15 +579,11 @@ const LifeLogs = (() => {
             </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 다음 예정일을 계산합니다.</div>`}
           </div>
           <div class="period-projection">
-            <div class="period-projection-title">월별 생리 시작일</div>
-            ${projection.length ? `
-            <div class="period-projection-list">
-              ${projection.map((d, i) => `
-                <div class="period-projection-row">
-                  <span class="period-projection-month">${d.getMonth() + 1}월</span>
-                  <span class="period-projection-date">${d.getDate()}일${i === 0 ? `<span class="period-projection-tag">현재</span>` : ""}</span>
-                </div>`).join("")}
-            </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 월별 예상일을 보여줍니다.</div>`}
+            <div class="period-projection-title">${year}년 생리 시작일</div>
+            <div class="period-projection-cols">
+              <div class="period-projection-col">${yearMonths.slice(0, 6).map(renderPeriodRow).join("")}</div>
+              <div class="period-projection-col">${yearMonths.slice(6).map(renderPeriodRow).join("")}</div>
+            </div>
           </div>
         </div>
       </div>`;
