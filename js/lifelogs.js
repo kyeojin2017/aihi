@@ -55,9 +55,10 @@ const LifeLogs = (() => {
   }
 
   function computeNextPeriodDate(settings) {
-    if (!settings || !settings.startDate || !settings.cycleLength) return null;
+    if (!settings || !settings.startDate) return null;
+    const cycleLength = settings.cycleLength || 28;
     const [y, m, d] = settings.startDate.split("-").map(Number);
-    return new Date(y, m - 1, d + Number(settings.cycleLength));
+    return new Date(y, m - 1, d + Number(cycleLength));
   }
 
   function formatMonthDay(date) {
@@ -134,8 +135,6 @@ const LifeLogs = (() => {
       save({ waterMl: next });
     } else if (action === "toggleAlcohol") {
       save({ alcohol: !rec.alcohol });
-    } else if (action === "togglePeriod") {
-      save({ isPeriodDay: !rec.isPeriodDay });
     } else if (action === "addMinutes") {
       editingExerciseMinutes = true;
       render();
@@ -337,11 +336,6 @@ const LifeLogs = (() => {
           <span class="section-icon tone-period">${icon("period")}</span>
           <span class="section-title">월경</span>
         </div>
-        <div class="flag-row">
-          <button type="button" class="flag tone-period${rec.isPeriodDay ? " on" : ""}" data-action="togglePeriod">
-            <span class="flag-icon">${icon("period")}</span>오늘 월경일
-          </button>
-        </div>
         <div class="visit-grid period-grid">
           <div class="field"><span class="field-label">생리 시작일</span><input class="field-box" type="date" data-field="periodStartDate" value="${settings.startDate || ""}"></div>
           <div class="field"><span class="field-label">생리일수</span><input class="field-box" type="number" min="1" max="14" data-field="periodLength" value="${settings.periodLength ?? ""}" placeholder="예: 5"></div>
@@ -352,7 +346,7 @@ const LifeLogs = (() => {
           <span class="period-next-label">다음 생리 예정일</span>
           <span class="period-next-value">${formatMonthDay(nextDate)}</span>
           <span class="period-dday">${formatDday(nextDate)}</span>
-        </div>` : `<div class="symptom-hint">생리 시작일과 평균주기를 입력하면 다음 예정일을 계산합니다.</div>`}
+        </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 다음 예정일을 계산합니다.</div>`}
       </div>`;
   }
 
