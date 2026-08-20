@@ -3,7 +3,8 @@ const LifeLogs = (() => {
   const WATER_GOAL = 2000;
   let editingExerciseCustom = false;
   let editingExerciseDuration = false;
-  let editingAlcoholCustom = false;
+  let mealsVisible = true;
+  let draggingAlcohol = false;
 
   // 카드 아이콘 — 외부 라이브러리 없이 인라인 SVG로 그린다
   const ICON = {
@@ -29,6 +30,29 @@ const LifeLogs = (() => {
     panel.addEventListener("click", onClick);
     panel.addEventListener("change", onChange);
     document.addEventListener("click", closePickersOutside);
+
+    panel.addEventListener("dragstart", e => {
+      if (e.target.closest(".alcohol-detail")) {
+        draggingAlcohol = true;
+        e.dataTransfer.effectAllowed = "move";
+      }
+    });
+    panel.addEventListener("dragover", e => {
+      if (draggingAlcohol && e.target.closest("[data-drop-zone='meals']")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }
+    });
+    panel.addEventListener("drop", e => {
+      const zone = e.target.closest("[data-drop-zone='meals']");
+      if (draggingAlcohol && zone) {
+        e.preventDefault();
+        const { rec } = current();
+        save({ alcoholOrder: rec.alcoholOrder === "after" ? "before" : "after" });
+      }
+      draggingAlcohol = false;
+    });
+    panel.addEventListener("dragend", () => { draggingAlcohol = false; });
   }
 
   function current() {
@@ -36,7 +60,7 @@ const LifeLogs = (() => {
     const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
       meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
       sleepHours: null, waterMl: null,
-      alcohol: false, alcoholType: "", alcoholCustomLabel: "", alcoholBottles: null, alcoholGlasses: null, alcoholFood: "",
+      alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholOrder: "before",
       caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: ""
     };
     return { dateKey, rec };
@@ -88,6 +112,17 @@ const LifeLogs = (() => {
     const cycleLength = settings.cycleLength || 28;
     const [y, m, d] = settings.startDate.split("-").map(Number);
     return new Date(y, m - 1, d + Number(cycleLength));
+  }
+
+  function computePeriodProjection(settings, count) {
+    if (!settings || !settings.startDate) return [];
+    const cycleLength = settings.cycleLength || 28;
+    const [y, m, d] = settings.startDate.split("-").map(Number);
+    const dates = [];
+    for (let i = 0; i < count; i++) {
+      dates.push(new Date(y, m - 1, d + cycleLength * i));
+    }
+    return dates;
   }
 
   function formatMonthDay(date) {
@@ -145,13 +180,16 @@ const LifeLogs = (() => {
       save({ [field]: el.value });
       return;
     }
-    if (field === "alcoholCustomLabel") {
-      editingAlcoholCustom = !el.value.trim();
+    if (field === "alcoholFood") {
       save({ [field]: el.value });
       return;
     }
-    if (field === "alcoholFood") {
-      save({ [field]: el.value });
+    if (field === "alcoholEntryLabel" || field === "alcoholEntryBottles" || field === "alcoholEntryGlasses") {
+      const entryId = el.dataset.entryId;
+      const key = field === "alcoholEntryLabel" ? "customLabel" : field === "alcoholEntryBottles" ? "bottles" : "glasses";
+      const value = field === "alcoholEntryLabel" ? el.value : numOrNull(el.value);
+      const entries = (rec.alcoholEntries || []).map(en => en.id === entryId ? { ...en, [key]: value } : en);
+      save({ alcoholEntries: entries });
       return;
     }
     if (field === "exerciseHours" || field === "exerciseMinutes") {
@@ -204,16 +242,21 @@ const LifeLogs = (() => {
           editingExerciseCustom = false;
         }
       }
-      if (el.dataset.field === "alcoholType") {
-        if (el.dataset.value === "기타") {
-          editingAlcoholCustom = true;
-        } else {
-          patch.alcoholCustomLabel = "";
-          editingAlcoholCustom = false;
-        }
-        patch.alcohol = true;
-      }
       save(patch);
+    } else if (action === "toggleAlcoholType") {
+      const type = el.dataset.value;
+      const entries = rec.alcoholEntries || [];
+      const exists = entries.some(en => en.type === type);
+      const nextEntries = exists
+        ? entries.filter(en => en.type !== type)
+        : [...entries, { id: Storage.uid(), type, customLabel: "", bottles: null, glasses: null }];
+      save({ alcoholEntries: nextEntries, alcohol: true });
+    } else if (action === "removeAlcoholEntry") {
+      const entries = (rec.alcoholEntries || []).filter(en => en.id !== el.dataset.entryId);
+      save({ alcoholEntries: entries });
+    } else if (action === "toggleMeals") {
+      mealsVisible = !mealsVisible;
+      render();
     }
   }
 
@@ -222,6 +265,8 @@ const LifeLogs = (() => {
       document.querySelectorAll(".type-picker.open").forEach(p => p.classList.remove("open"));
     }
   }
+
+  const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
   function sleepAverage(dateKey, logs, days) {
     const [y, m, d] = dateKey.split("-").map(Number);
@@ -237,21 +282,92 @@ const LifeLogs = (() => {
     return { avg: count ? sum / count : null, count };
   }
 
+  function sleepDailySeries(dateKey, logs, days) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const end = new Date(y, m - 1, d);
+    const series = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const day = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i);
+      const key = Storage.toDateKey(day);
+      const log = logs.find(l => l.date === key && l.memberId === AppState.memberId);
+      series.push({ key, day, sleepHours: log && log.sleepHours != null ? log.sleepHours : null });
+    }
+    return series;
+  }
+
+  function sleepWeeklySeries(dateKey, logs, weeks) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const end = new Date(y, m - 1, d);
+    const series = [];
+    for (let w = weeks - 1; w >= 0; w--) {
+      let sum = 0;
+      let count = 0;
+      for (let i = 0; i < 7; i++) {
+        const offset = w * 7 + i;
+        const day = new Date(end.getFullYear(), end.getMonth(), end.getDate() - offset);
+        const key = Storage.toDateKey(day);
+        const log = logs.find(l => l.date === key && l.memberId === AppState.memberId);
+        if (log && log.sleepHours != null) { sum += log.sleepHours; count += 1; }
+      }
+      series.push({ weekLabel: `${weeks - w}주`, avg: count ? sum / count : null, count });
+    }
+    return series;
+  }
+
+  function renderSleepWeeklyBars(series) {
+    const recorded = series.filter(w => w.avg != null);
+    if (!recorded.length) return "";
+    const max = Math.max(9, ...recorded.map(w => w.avg));
+    return `
+      <div class="sleep-bars weekly">
+        ${series.map(w => {
+          const has = w.avg != null;
+          const pct = has ? Math.round((w.avg / max) * 100) : 0;
+          return `
+            <div class="sleep-bar-col">
+              <span class="sleep-bar-track"><span class="sleep-bar-fill" style="height:${pct}%;"></span></span>
+              <span class="sleep-bar-label">${w.weekLabel}</span>
+            </div>`;
+        }).join("")}
+      </div>`;
+  }
+
+  function renderSleepBars(series, showWeekday) {
+    const recorded = series.filter(d => d.sleepHours != null);
+    if (!recorded.length) return "";
+    const max = Math.max(9, ...recorded.map(d => d.sleepHours));
+    return `
+      <div class="sleep-bars${showWeekday ? "" : " compact"}">
+        ${series.map(d => {
+          const has = d.sleepHours != null;
+          const pct = has ? Math.round((d.sleepHours / max) * 100) : 0;
+          return `
+            <div class="sleep-bar-col">
+              <span class="sleep-bar-track"><span class="sleep-bar-fill" style="height:${pct}%;"></span></span>
+              ${showWeekday ? `<span class="sleep-bar-label">${WEEKDAY_LABELS[d.day.getDay()]}</span>` : ""}
+            </div>`;
+        }).join("")}
+      </div>`;
+  }
+
   function renderSleepAverages(dateKey, logs) {
     const week = sleepAverage(dateKey, logs, 7);
     const month = sleepAverage(dateKey, logs, 30);
-    const box = (label, sub, data) => `
+    const weekBars = renderSleepBars(sleepDailySeries(dateKey, logs, 7), true);
+    const monthBars = renderSleepWeeklyBars(sleepWeeklySeries(dateKey, logs, 5));
+    const box = (label, sub, data, barsHtml) => `
       <div class="card life-card sleep-avg-card">
         <div class="sleep-avg-label"><span class="section-icon tone-sleep">${icon("trend")}</span>${label}</div>
         ${data.avg != null
           ? `<div class="sleep-avg-value">${data.avg.toFixed(1)}<span class="stat-unit">시간</span></div>
-             <div class="sleep-avg-sub">기록 ${data.count}일 · ${sub}</div>`
+             <div class="sleep-avg-sub">기록 ${data.count}일 · ${sub}</div>
+             ${barsHtml}`
           : `<div class="life-empty">기록 없음</div>`}
       </div>`;
     return `
       <div class="sleep-avg-grid">
-        ${box("주간 평균 수면", "최근 7일", week)}
-        ${box("월간 평균 수면", "최근 30일", month)}
+        ${box("주간 평균 수면", "최근 7일", week, weekBars)}
+        ${box("월간 평균 수면", "최근 30일", month, monthBars)}
       </div>`;
   }
 
@@ -367,23 +483,54 @@ const LifeLogs = (() => {
     }).join("");
   }
 
-  function renderAlcoholDetail(rec) {
-    const isCustom = rec.alcoholType === "기타";
-    if (!isCustom) editingAlcoholCustom = false;
-    const typeLabel = isCustom && rec.alcoholCustomLabel ? rec.alcoholCustomLabel : rec.alcoholType;
-    const showCustomInput = isCustom && (editingAlcoholCustom || !rec.alcoholCustomLabel);
+  function multiTypePicker(id, options, selectedTypes) {
     return `
-      <div class="alcohol-detail tone-alcohol">
+      <div class="type-picker" id="${id}">
+        ${options.map(o => `<button type="button" class="type-chip${selectedTypes.includes(o) ? " active" : ""}" data-action="toggleAlcoholType" data-value="${o}">${o}</button>`).join("")}
+      </div>`;
+  }
+
+  function qtySelect(entryId, field, value, max) {
+    const opts = [];
+    for (let n = 0; n <= max; n++) opts.push(n);
+    return `
+      <select class="alcohol-entry-qty-select" data-entry-id="${entryId}" data-field="${field}">
+        ${opts.map(n => `<option value="${n}"${Number(value) === n ? " selected" : ""}>${n}</option>`).join("")}
+      </select>`;
+  }
+
+  function renderAlcoholEntryRow(en) {
+    const isCustom = en.type === "기타";
+    return `
+      <div class="alcohol-entry-row">
+        ${isCustom
+          ? `<input type="text" class="alcohol-entry-name-input" data-entry-id="${en.id}" data-field="alcoholEntryLabel" value="${Storage.escapeHtml(en.customLabel || "")}" placeholder="이름 입력">`
+          : `<span class="alcohol-entry-name">${Storage.escapeHtml(en.type)}</span>`}
+        <span class="alcohol-entry-qty">
+          ${qtySelect(en.id, "alcoholEntryBottles", en.bottles ?? 0, 10)}
+          <span class="alcohol-entry-unit">병</span>
+        </span>
+        <span class="alcohol-entry-qty">
+          ${qtySelect(en.id, "alcoholEntryGlasses", en.glasses ?? 0, 15)}
+          <span class="alcohol-entry-unit">잔</span>
+        </span>
+        <button type="button" class="alcohol-entry-remove" data-action="removeAlcoholEntry" data-entry-id="${en.id}" aria-label="삭제">✕</button>
+      </div>`;
+  }
+
+  function renderAlcoholDetail(rec) {
+    const entries = rec.alcoholEntries || [];
+    const selectedTypes = entries.map(en => en.type);
+    return `
+      <div class="alcohol-detail tone-alcohol" draggable="true">
         <div class="metric-head-row">
           ${iconWithPicker("alcohol", "alcohol", "alcoholTypePicker", "음주 종류 선택",
-            typePicker("alcoholTypePicker", "alcoholType", ALCOHOL_TYPES, rec.alcoholType))}
-          <span class="metric-label">음주 종류${typeLabel ? `<span class="metric-type-tag">${Storage.escapeHtml(typeLabel)}</span>` : ""}</span>
+            multiTypePicker("alcoholTypePicker", ALCOHOL_TYPES, selectedTypes))}
+          <span class="metric-label">음주 종류</span>
         </div>
-        ${showCustomInput ? `<input type="text" class="metric-custom-input" data-field="alcoholCustomLabel" value="${Storage.escapeHtml(rec.alcoholCustomLabel || "")}" placeholder="술 이름 입력">` : ""}
-        <div class="visit-grid alcohol-qty-grid">
-          <div class="field"><span class="field-label">병</span><input class="field-box" type="number" min="0" step="1" data-field="alcoholBottles" value="${rec.alcoholBottles ?? ""}" placeholder="0"></div>
-          <div class="field"><span class="field-label">잔</span><input class="field-box" type="number" min="0" step="1" data-field="alcoholGlasses" value="${rec.alcoholGlasses ?? ""}" placeholder="0"></div>
-        </div>
+        ${entries.length
+          ? `<div class="alcohol-entries">${entries.map(renderAlcoholEntryRow).join("")}</div>`
+          : `<div class="life-empty">종류를 선택해주세요.</div>`}
         <div class="field alcohol-food-field">
           <span class="field-label">함께 먹은 음식</span>
           <input class="field-box" type="text" data-field="alcoholFood" value="${Storage.escapeHtml(rec.alcoholFood || "")}" placeholder="예: 삼겹살, 골뱅이무침">
@@ -394,23 +541,39 @@ const LifeLogs = (() => {
   function renderPeriodCard(rec) {
     const settings = Storage.getPeriodSettings(AppState.memberId) || {};
     const nextDate = computeNextPeriodDate(settings);
+    const projection = computePeriodProjection(settings, 6);
     return `
       <div class="card life-card">
         <div class="section-head">
           <span class="section-icon tone-period">${icon("period")}</span>
           <span class="section-title">월경</span>
         </div>
-        <div class="visit-grid period-grid">
-          <div class="field"><span class="field-label">생리 시작일</span><input class="field-box" type="date" data-field="periodStartDate" value="${settings.startDate || ""}"></div>
-          <div class="field"><span class="field-label">생리일수</span><input class="field-box" type="number" min="1" max="14" data-field="periodLength" value="${settings.periodLength ?? ""}" placeholder="예: 5"></div>
-          <div class="field"><span class="field-label">평균주기</span><input class="field-box" type="number" min="15" max="60" data-field="cycleLength" value="${settings.cycleLength ?? ""}" placeholder="예: 28"></div>
+        <div class="period-split">
+          <div class="period-inputs">
+            <div class="visit-grid period-grid">
+              <div class="field"><span class="field-label">생리 시작일</span><input class="field-box" type="date" data-field="periodStartDate" value="${settings.startDate || ""}"></div>
+              <div class="field"><span class="field-label">생리일수</span><input class="field-box" type="number" min="1" max="14" data-field="periodLength" value="${settings.periodLength ?? ""}" placeholder="예: 5"></div>
+              <div class="field"><span class="field-label">평균주기</span><input class="field-box" type="number" min="15" max="60" data-field="cycleLength" value="${settings.cycleLength ?? ""}" placeholder="예: 28"></div>
+            </div>
+            ${nextDate ? `
+            <div class="period-next">
+              <span class="period-next-label">다음 생리 예정일</span>
+              <span class="period-next-value">${formatMonthDay(nextDate)}</span>
+              <span class="period-dday">${formatDday(nextDate)}</span>
+            </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 다음 예정일을 계산합니다.</div>`}
+          </div>
+          <div class="period-projection">
+            <div class="period-projection-title">월별 생리 시작일</div>
+            ${projection.length ? `
+            <div class="period-projection-list">
+              ${projection.map((d, i) => `
+                <div class="period-projection-row">
+                  <span class="period-projection-month">${d.getMonth() + 1}월</span>
+                  <span class="period-projection-date">${d.getDate()}일${i === 0 ? `<span class="period-projection-tag">현재</span>` : ""}</span>
+                </div>`).join("")}
+            </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 월별 예상일을 보여줍니다.</div>`}
+          </div>
         </div>
-        ${nextDate ? `
-        <div class="period-next">
-          <span class="period-next-label">다음 생리 예정일</span>
-          <span class="period-next-value">${formatMonthDay(nextDate)}</span>
-          <span class="period-dday">${formatDday(nextDate)}</span>
-        </div>` : `<div class="symptom-hint">생리 시작일을 입력하면 다음 예정일을 계산합니다.</div>`}
       </div>`;
   }
 
@@ -455,14 +618,20 @@ const LifeLogs = (() => {
           <span class="section-title">식사</span>
           <span class="section-count">${(rec.meals || []).length}끼</span>
           <span class="section-actions">
+            <button type="button" class="flag tone-meal${mealsVisible ? " on" : ""}" data-action="toggleMeals">
+              <span class="flag-icon">${icon("meal")}</span>식사
+            </button>
             <button type="button" class="flag tone-alcohol${rec.alcohol ? " on" : ""}" data-action="toggleAlcohol">
               <span class="flag-icon">${icon("alcohol")}</span>음주
             </button>
-            <button type="button" class="chip-btn" data-action="addMeal">+ 추가</button>
+            ${mealsVisible ? `<button type="button" class="chip-btn" data-action="addMeal">+ 추가</button>` : ""}
           </span>
         </div>
-        ${rec.alcohol ? renderAlcoholDetail(rec) : ""}
-        <div class="meal-list">${renderMeals(rec)}</div>
+        ${(() => {
+          const alcoholBlock = rec.alcohol ? renderAlcoholDetail(rec) : "";
+          const mealsBlock = mealsVisible ? `<div class="meal-list" data-drop-zone="meals">${renderMeals(rec)}</div>` : "";
+          return rec.alcoholOrder === "after" ? mealsBlock + alcoholBlock : alcoholBlock + mealsBlock;
+        })()}
       </div>
 
       ${renderPeriodCard(rec)}

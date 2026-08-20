@@ -101,7 +101,7 @@ const Storage = (() => {
         id: uid(), date, memberId,
         meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
         sleepHours: null, waterMl: null,
-        alcohol: false, alcoholType: "", alcoholCustomLabel: "", alcoholBottles: null, alcoholGlasses: null, alcoholFood: "",
+        alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholOrder: "before",
         caffeineType: "", caffeineCups: null, isPeriodDay: false, memo: "",
         createdAt: now, updatedAt: now,
         ...patch
@@ -316,7 +316,7 @@ const Storage = (() => {
   }
 
   return {
-    toDateKey, escapeHtml,
+    toDateKey, escapeHtml, uid,
     getVisits, addVisit, updateVisit, deleteVisit,
     getSymptoms, getSymptom, saveSymptom,
     getLifeLogs, getLifeLog, saveLifeLog,
