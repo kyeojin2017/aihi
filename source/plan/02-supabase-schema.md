@@ -142,7 +142,9 @@ create table checkups (
 ```
 
 ### 3.8 photos — 병원기록지 사진 (건강일기 4번)
-파일 자체는 Supabase Storage 버킷(`medical-photos`)에 올리고, 이 테이블은 메타데이터만 관리.
+파일 자체는 Supabase Storage 버킷(`medical-photos`, private)에 올리고, 이 테이블은 메타데이터만 관리.
+업로드 경로는 `<member_id>/<파일명>` 형식으로 고정 — 스토리지 정책이 경로의 첫 폴더(=member_id)로
+소유자를 확인하기 때문에 반드시 이 규칙을 지켜야 함 (자세한 정책은 `supabase/storage.sql` 참고).
 ```sql
 create table photos (
   id           uuid primary key default gen_random_uuid(),
@@ -217,6 +219,7 @@ create policy "own visits" on visits
 - [x] `supabase/schema.sql` 작성 + 실제 DB에 적용 완료 — 테이블 10개(family_members, conditions, supplements, symptoms, visits, prescriptions, prescription_items, checkups, photos, life_logs) 전부 생성, RLS 전 테이블 활성화 + 정책 1개씩 확인 완료
 - [x] 로그인 화면 추가 (`login.html` + `js/login.js`, Supabase Auth 이메일/비밀번호 — 매직링크는 보류)
   - `js/auth.js`가 `index.html` 진입 시 세션 체크 후 비로그인 상태면 `login.html`로 리다이렉트, 아바타 클릭 시 로그아웃
+- [x] `supabase/storage.sql` 작성 + 적용 완료 — `medical-photos` 버킷(private) 생성, 소유자 기준 접근 정책 적용
 - [ ] `family_members` 시딩 (본인/배우자/서준) — RLS가 `owner_id = auth.uid()` 기준이라 로그인 붙기 전에는 시딩 불가
 - [ ] `js/storage.js`를 Supabase 호출로 교체 (함수 시그니처 유지, 내부만 async/await + supabase-js 쿼리로 교체)
 - [ ] `symptoms.js`/`visits.js`의 `Storage.xxx()` 호출부에 `await` 추가, 저장 중 로딩 상태 표시

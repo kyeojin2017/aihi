@@ -45,11 +45,11 @@ const LifeLogs = (() => {
         e.dataTransfer.dropEffect = "move";
       }
     });
-    panel.addEventListener("drop", e => {
+    panel.addEventListener("drop", async e => {
       const zone = e.target.closest("[data-drop-zone]");
       if (draggingAlcohol && zone) {
         e.preventDefault();
-        const { rec } = current();
+        const { rec } = await current();
         const meals = rec.meals || [];
         let position;
         if (zone.dataset.dropZone === "meal-row") {
@@ -67,9 +67,9 @@ const LifeLogs = (() => {
     panel.addEventListener("dragend", () => { draggingAlcohol = false; });
   }
 
-  function current() {
+  async function current() {
     const dateKey = Storage.toDateKey(AppState.selectedDate);
-    const rec = Storage.getLifeLog(dateKey, AppState.memberId) || {
+    const rec = (await Storage.getLifeLog(dateKey, AppState.memberId)) || {
       meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
       sleepHours: null, waterMl: null,
       alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
@@ -78,11 +78,11 @@ const LifeLogs = (() => {
     return { dateKey, rec };
   }
 
-  function save(patch) {
-    const { dateKey } = current();
-    Storage.saveLifeLog(dateKey, AppState.memberId, patch);
-    if (typeof window.refreshAll === "function") window.refreshAll();
-    else render();
+  async function save(patch) {
+    const { dateKey } = await current();
+    await Storage.saveLifeLog(dateKey, AppState.memberId, patch);
+    if (typeof window.refreshAll === "function") await window.refreshAll();
+    else await render();
   }
 
   function numOrNull(value) {
@@ -126,9 +126,9 @@ const LifeLogs = (() => {
     return new Date(y, m - 1, d + Number(cycleLength));
   }
 
-  function computePeriodYearProjection(memberId, year, currentStartDate) {
+  async function computePeriodYearProjection(memberId, year, currentStartDate) {
     const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, day: null, isCurrent: false }));
-    const entries = Storage.getPeriodEntries(memberId);
+    const entries = await Storage.getPeriodEntries(memberId);
     entries.forEach(en => {
       if (!en.date) return;
       const [ey, em, ed] = en.date.split("-").map(Number);
@@ -153,23 +153,23 @@ const LifeLogs = (() => {
     return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
   }
 
-  function onChange(e) {
+  async function onChange(e) {
     const el = e.target.closest("[data-field]");
     if (!el) return;
-    const { rec } = current();
+    const { rec } = await current();
     const field = el.dataset.field;
 
     if (field === "periodStartDate" || field === "periodLength" || field === "cycleLength") {
       const key = field === "periodStartDate" ? "startDate" : field;
       const value = field === "periodStartDate" ? (el.value || null) : numOrNull(el.value);
       if (field === "periodStartDate" && !value) {
-        const prevSettings = Storage.getPeriodSettings(AppState.memberId);
-        if (prevSettings && prevSettings.startDate) Storage.deletePeriodEntry(AppState.memberId, prevSettings.startDate);
+        const prevSettings = await Storage.getPeriodSettings(AppState.memberId);
+        if (prevSettings && prevSettings.startDate) await Storage.deletePeriodEntry(AppState.memberId, prevSettings.startDate);
       }
-      Storage.savePeriodSettings(AppState.memberId, { [key]: value });
-      if (field === "periodStartDate" && value) Storage.recordPeriodEntry(AppState.memberId, value);
-      if (typeof window.refreshAll === "function") window.refreshAll();
-      else render();
+      await Storage.savePeriodSettings(AppState.memberId, { [key]: value });
+      if (field === "periodStartDate" && value) await Storage.recordPeriodEntry(AppState.memberId, value);
+      if (typeof window.refreshAll === "function") await window.refreshAll();
+      else await render();
       return;
     }
     if (field === "mealMemo") {
@@ -224,10 +224,10 @@ const LifeLogs = (() => {
     save({ [field]: numOrNull(el.value) });
   }
 
-  function onClick(e) {
+  async function onClick(e) {
     const el = e.target.closest("[data-action]");
     if (!el) return;
-    const { rec } = current();
+    const { rec } = await current();
     const action = el.dataset.action;
 
     if (action === "addMeal") {
@@ -290,7 +290,7 @@ const LifeLogs = (() => {
       mealsVisible = !mealsVisible;
       render();
     } else if (action === "periodProjectionYear") {
-      const settings = Storage.getPeriodSettings(AppState.memberId) || {};
+      const settings = (await Storage.getPeriodSettings(AppState.memberId)) || {};
       const base = periodProjectionYear ?? defaultPeriodProjectionYear(settings);
       periodProjectionYear = base + Number(el.dataset.delta);
       render();
@@ -597,11 +597,11 @@ const LifeLogs = (() => {
     return settings.startDate ? Number(settings.startDate.split("-")[0]) : new Date().getFullYear();
   }
 
-  function renderPeriodCard(rec) {
-    const settings = Storage.getPeriodSettings(AppState.memberId) || {};
+  async function renderPeriodCard(rec) {
+    const settings = (await Storage.getPeriodSettings(AppState.memberId)) || {};
     const nextDate = computeNextPeriodDate(settings);
     const year = periodProjectionYear ?? defaultPeriodProjectionYear(settings);
-    const yearMonths = computePeriodYearProjection(AppState.memberId, year, settings.startDate);
+    const yearMonths = await computePeriodYearProjection(AppState.memberId, year, settings.startDate);
     return `
       <div class="card life-card">
         <div class="section-head">
@@ -637,12 +637,13 @@ const LifeLogs = (() => {
       </div>`;
   }
 
-  function render() {
+  async function render() {
     const body = document.getElementById("lifeBody");
     if (!body) return;
 
-    const { dateKey, rec } = current();
-    const allLogs = Storage.getLifeLogs();
+    const { dateKey, rec } = await current();
+    const allLogs = await Storage.getLifeLogs();
+    const periodCardHtml = await renderPeriodCard(rec);
     const d = AppState.selectedDate;
     document.getElementById("lifeDate").textContent =
       `${d.getMonth() + 1}월 ${d.getDate()}일 기록`;
@@ -699,7 +700,7 @@ const LifeLogs = (() => {
         })()}
       </div>
 
-      ${renderPeriodCard(rec)}
+      ${periodCardHtml}
 
       ${renderSleepAverages(dateKey, allLogs)}
     `;

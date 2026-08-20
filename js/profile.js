@@ -48,17 +48,17 @@ const Profile = (() => {
     return `${y}.${m}.${d}`;
   }
 
-  function render() {
-    renderInfoCard();
-    renderEntityCard("conditions");
-    renderEntityCard("medications");
-    renderEntityCard("supplements");
+  async function render() {
+    await renderInfoCard();
+    await renderEntityCard("conditions");
+    await renderEntityCard("medications");
+    await renderEntityCard("supplements");
   }
 
-  function renderInfoCard() {
+  async function renderInfoCard() {
     const el = document.getElementById("profileInfoCard");
     if (!el) return;
-    const info = Storage.getFamilyMember(AppState.memberId) || {};
+    const info = (await Storage.getFamilyMember(AppState.memberId)) || {};
     el.innerHTML = editingInfo ? renderInfoForm(info) : renderInfoView(info);
   }
 
@@ -120,12 +120,12 @@ const Profile = (() => {
       </div>`;
   }
 
-  function renderEntityCard(type) {
+  async function renderEntityCard(type) {
     const cfg = ENTITY_CONFIG[type];
     const container = document.getElementById(`${type}Card`);
     if (!container) return;
 
-    const items = STORAGE_FN[type].getAll(AppState.memberId);
+    const items = await STORAGE_FN[type].getAll(AppState.memberId);
     const mode = formState[type];
 
     const formHtml = mode ? renderEntityForm(type, cfg, mode && typeof mode === "object" ? items.find(i => i.id === mode.edit) : null) : "";
@@ -180,13 +180,13 @@ const Profile = (() => {
       </div>`;
   }
 
-  function onRootClick(e) {
+  async function onRootClick(e) {
     const actionEl = e.target.closest("[data-action]");
     if (!actionEl) return;
     const action = actionEl.dataset.action;
 
-    if (action === "edit-info") { editingInfo = true; renderInfoCard(); return; }
-    if (action === "cancel-info") { editingInfo = false; renderInfoCard(); return; }
+    if (action === "edit-info") { editingInfo = true; await renderInfoCard(); return; }
+    if (action === "cancel-info") { editingInfo = false; await renderInfoCard(); return; }
     if (action === "save-info") {
       const cardEl = document.getElementById("profileInfoCard");
       const data = {};
@@ -196,10 +196,10 @@ const Profile = (() => {
       data.birthDate = data.birthDate || null;
       data.gender = data.gender || null;
       data.bloodType = data.bloodType || null;
-      Storage.updateFamilyMember(AppState.memberId, data);
+      await Storage.updateFamilyMember(AppState.memberId, data);
       editingInfo = false;
-      renderInfoCard();
-      if (typeof window.refreshFamilyIdentity === "function") window.refreshFamilyIdentity();
+      await renderInfoCard();
+      if (typeof window.refreshFamilyIdentity === "function") await window.refreshFamilyIdentity();
       return;
     }
 
@@ -209,17 +209,17 @@ const Profile = (() => {
 
     if (action === "add") {
       formState[type] = "add";
-      renderEntityCard(type);
+      await renderEntityCard(type);
     } else if (action === "edit") {
       formState[type] = { edit: actionEl.dataset.id };
-      renderEntityCard(type);
+      await renderEntityCard(type);
     } else if (action === "cancel") {
       formState[type] = null;
-      renderEntityCard(type);
+      await renderEntityCard(type);
     } else if (action === "delete") {
       if (window.confirm("삭제할까요?")) {
-        store.remove(actionEl.dataset.id);
-        renderEntityCard(type);
+        await store.remove(actionEl.dataset.id);
+        await renderEntityCard(type);
       }
     } else if (action === "save") {
       const formEl = actionEl.closest(".simple-item-form");
@@ -230,10 +230,10 @@ const Profile = (() => {
         return;
       }
       const editingId = formEl.dataset.editingId;
-      if (editingId) store.update(editingId, data);
-      else store.add(AppState.memberId, data);
+      if (editingId) await store.update(editingId, data);
+      else await store.add(AppState.memberId, data);
       formState[type] = null;
-      renderEntityCard(type);
+      await renderEntityCard(type);
     }
   }
 

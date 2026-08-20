@@ -39,14 +39,15 @@ const Report = (() => {
     };
   }
 
-  function computeSummary(memberId, year, month) {
+  async function computeSummary(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
 
-    const visits = Storage.getVisits().filter(v => v.memberId === memberId && v.date);
-    const symptoms = Storage.getSymptoms().filter(s => s.memberId === memberId);
-    const prescriptions = Storage.getPrescriptions(memberId);
-    const checkups = Storage.getCheckups(memberId);
+    const [visitsRaw, symptomsRaw, prescriptions, checkups] = await Promise.all([
+      Storage.getVisits(), Storage.getSymptoms(), Storage.getPrescriptions(memberId), Storage.getCheckups(memberId)
+    ]);
+    const visits = visitsRaw.filter(v => v.memberId === memberId && v.date);
+    const symptoms = symptomsRaw.filter(s => s.memberId === memberId);
 
     const visitCount = visits.filter(v => inRange(v.date)).length;
     const prescriptionCount = prescriptions.filter(p => inRange(p.startDate)).length;
@@ -56,10 +57,10 @@ const Report = (() => {
     return { visitCount, prescriptionCount, symptomDays, checkupCount };
   }
 
-  function computeDeptBreakdown(memberId, year, month) {
+  async function computeDeptBreakdown(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month == null ? null : month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
-    const visits = Storage.getVisits().filter(v => v.memberId === memberId && v.department && inRange(v.date));
+    const visits = (await Storage.getVisits()).filter(v => v.memberId === memberId && v.department && inRange(v.date));
     const counts = {};
     visits.forEach(v => { counts[v.department] = (counts[v.department] || 0) + 1; });
     const rows = Object.entries(counts).map(([name, count]) => ({ name, count }));
@@ -68,19 +69,19 @@ const Report = (() => {
     return rows.map(r => ({ ...r, pct: max ? Math.round((r.count / max) * 100) : 0 }));
   }
 
-  function computeVisitList(memberId, year, month) {
+  async function computeVisitList(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
-    return Storage.getVisits()
+    return (await Storage.getVisits())
       .filter(v => v.memberId === memberId && inRange(v.date))
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .map(v => ({ date: v.date, hospital: v.hospital || "-", department: v.department || "" }));
   }
 
-  function computePrescriptionList(memberId, year, month) {
+  async function computePrescriptionList(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
-    return Storage.getPrescriptions(memberId)
+    return (await Storage.getPrescriptions(memberId))
       .filter(p => inRange(p.startDate))
       .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""))
       .map(p => ({
@@ -89,10 +90,10 @@ const Report = (() => {
       }));
   }
 
-  function computeSymptomBreakdown(memberId, year, month) {
+  async function computeSymptomBreakdown(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
-    const symptoms = Storage.getSymptoms().filter(s => s.memberId === memberId && s.hasSymptom && inRange(s.date));
+    const symptoms = (await Storage.getSymptoms()).filter(s => s.memberId === memberId && s.hasSymptom && inRange(s.date));
     const tagCounts = {};
     let painSum = 0;
     let painCount = 0;
@@ -110,10 +111,10 @@ const Report = (() => {
     };
   }
 
-  function computeCheckupList(memberId, year, month) {
+  async function computeCheckupList(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
-    return Storage.getCheckups(memberId)
+    return (await Storage.getCheckups(memberId))
       .filter(c => inRange(c.date))
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .map(c => ({
@@ -130,9 +131,10 @@ const Report = (() => {
     return `${m}월 ${d}일`;
   }
 
-  function renderDeptDetail(memberId, year, month) {
-    const rows = computeDeptBreakdown(memberId, year, month);
-    const visits = computeVisitList(memberId, year, month);
+  async function renderDeptDetail(memberId, year, month) {
+    const [rows, visits] = await Promise.all([
+      computeDeptBreakdown(memberId, year, month), computeVisitList(memberId, year, month)
+    ]);
     return `
       <div class="report-detail">
         <div class="dept-title">진료과별 방문 횟수</div>
@@ -155,8 +157,8 @@ const Report = (() => {
       </div>`;
   }
 
-  function renderRxDetail(memberId, year, month) {
-    const rows = computePrescriptionList(memberId, year, month);
+  async function renderRxDetail(memberId, year, month) {
+    const rows = await computePrescriptionList(memberId, year, month);
     return `
       <div class="report-detail">
         <div class="dept-title">처방받은 날짜</div>
@@ -167,8 +169,8 @@ const Report = (() => {
       </div>`;
   }
 
-  function renderSymptomDetail(memberId, year, month) {
-    const s = computeSymptomBreakdown(memberId, year, month);
+  async function renderSymptomDetail(memberId, year, month) {
+    const s = await computeSymptomBreakdown(memberId, year, month);
     return `
       <div class="report-detail">
         <div class="dept-title">증상 통계${s.avgPain != null ? ` · 평균 통증 ${s.avgPain}` : ""}</div>
@@ -179,8 +181,8 @@ const Report = (() => {
       </div>`;
   }
 
-  function renderCheckupDetail(memberId, year, month) {
-    const rows = computeCheckupList(memberId, year, month);
+  async function renderCheckupDetail(memberId, year, month) {
+    const rows = await computeCheckupList(memberId, year, month);
     return `
       <div class="report-detail">
         <div class="dept-title">접종 · 검진 내역</div>
@@ -191,7 +193,7 @@ const Report = (() => {
       </div>`;
   }
 
-  function renderDetail(memberId, year, month) {
+  async function renderDetail(memberId, year, month) {
     if (activeDetail === "visit") return renderDeptDetail(memberId, year, month);
     if (activeDetail === "rx") return renderRxDetail(memberId, year, month);
     if (activeDetail === "symptom") return renderSymptomDetail(memberId, year, month);
@@ -199,11 +201,13 @@ const Report = (() => {
     return "";
   }
 
-  function buildNarrativeSummary(memberId, year, month, periodLabel) {
-    const summary = computeSummary(memberId, year, month);
-    const deptRows = computeDeptBreakdown(memberId, year, month);
-    const symptomStats = computeSymptomBreakdown(memberId, year, month);
-    const checkups = computeCheckupList(memberId, year, month);
+  async function buildNarrativeSummary(memberId, year, month, periodLabel) {
+    const [summary, deptRows, symptomStats, checkups] = await Promise.all([
+      computeSummary(memberId, year, month),
+      computeDeptBreakdown(memberId, year, month),
+      computeSymptomBreakdown(memberId, year, month),
+      computeCheckupList(memberId, year, month)
+    ]);
     const periodPhrase = month === null ? `${year}년 한 해 동안` : `${periodLabel} 한 달간`;
 
     const deptNames = deptRows.map(r => r.name);
@@ -224,16 +228,19 @@ const Report = (() => {
     return [visitSentence, symptomSentence, checkupSentence];
   }
 
-  function render() {
+  async function render() {
     const el = document.getElementById("reportBody");
     if (!el) return;
 
     const memberId = AppState.memberId;
     const year = calendarState.year;
     const month = period === "month" ? calendarState.month : null;
-    const summary = computeSummary(memberId, year, month);
     const periodLabel = period === "month" ? `${month + 1}월` : `${year}년`;
-    const narrative = buildNarrativeSummary(memberId, year, month, periodLabel);
+    const [summary, narrative, detailHtml] = await Promise.all([
+      computeSummary(memberId, year, month),
+      buildNarrativeSummary(memberId, year, month, periodLabel),
+      renderDetail(memberId, year, month)
+    ]);
 
     document.querySelectorAll("#reportPeriodToggle button").forEach(b => {
       b.classList.toggle("active", b.dataset.period === period);
@@ -253,7 +260,7 @@ const Report = (() => {
         <div class="dept-title">이달의 건강</div>
         <div class="report-narrative-text">${narrative.map(line => `<p>${Storage.escapeHtml(line)}</p>`).join("")}</div>
       </div>
-      ${renderDetail(memberId, year, month)}`;
+      ${detailHtml}`;
   }
 
   return { render, init, computeSummary, computeDeptBreakdown };

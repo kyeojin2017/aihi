@@ -3,3 +3,18 @@ node_modules/
 .env.local
 supabase/.env
 supabase/.env.local
+
+# 참고용 캡처 이미지 (저장소에 올리지 않음)
+hhh/
+*.jpg
+*.jpeg
+# Capacitor web copy (regenerate: cp -r index.html css js manifest.json sw.js icons www/)
+www/
+
+# Android build outputs / machine-specific files
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+*.apk

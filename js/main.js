@@ -16,6 +16,7 @@ let currentSection = "diary";
 const calendarState = { year: REAL_TODAY.getFullYear(), month: REAL_TODAY.getMonth() };
 window.calendarState = calendarState;
 const SECTION_LABEL = { diary: "건강일기", profile: "개인정보", biorhythm: "생활 바이오리듬" };
+let boundOnce = false;
 
 function pad2(n) { return String(n).padStart(2, "0"); }
 
@@ -33,25 +34,29 @@ function hasLifeEntry(log) {
     (log.memo || "").trim() !== "";
 }
 
-function computeMarks(year, month) {
+async function computeMarks(year, month) {
   const prefix = `${year}-${pad2(month + 1)}-`;
   const marks = {};
 
-  Storage.getVisits()
+  const [visits, symptoms, lifeLogs] = await Promise.all([
+    Storage.getVisits(), Storage.getSymptoms(), Storage.getLifeLogs()
+  ]);
+
+  visits
     .filter(v => v.memberId === AppState.memberId && v.date && v.date.startsWith(prefix))
     .forEach(v => {
       const day = Number(v.date.slice(8, 10));
       (marks[day] = marks[day] || new Set()).add("visit");
     });
 
-  Storage.getSymptoms()
+  symptoms
     .filter(s => s.memberId === AppState.memberId && s.date && s.date.startsWith(prefix) && s.hasSymptom)
     .forEach(s => {
       const day = Number(s.date.slice(8, 10));
       (marks[day] = marks[day] || new Set()).add("pain");
     });
 
-  Storage.getLifeLogs()
+  lifeLogs
     .filter(l => l.memberId === AppState.memberId && l.date && l.date.startsWith(prefix) && hasLifeEntry(l))
     .forEach(l => {
       const day = Number(l.date.slice(8, 10));
@@ -63,7 +68,7 @@ function computeMarks(year, month) {
   return result;
 }
 
-function renderCalendar() {
+async function renderCalendar() {
   const { year, month } = calendarState;
 
   document.getElementById("calendarMonth").textContent = `${year}년 ${month + 1}월`;
@@ -71,7 +76,7 @@ function renderCalendar() {
 
   const lead = new Date(year, month, 1).getDay();
   const total = daysInMonth(year, month);
-  const marks = computeMarks(year, month);
+  const marks = await computeMarks(year, month);
   const isRealCurrentMonth = year === REAL_TODAY.getFullYear() && month === REAL_TODAY.getMonth();
   const selectedKey = Storage.toDateKey(AppState.selectedDate);
 
@@ -95,12 +100,12 @@ function renderCalendar() {
   }
   document.getElementById("calendarDays").innerHTML = cells.join("");
 
-  renderSummaryPanel();
+  await renderSummaryPanel();
 }
 
-function renderSummaryPanel() {
+async function renderSummaryPanel() {
   const { year, month } = calendarState;
-  const summary = Report.computeSummary(AppState.memberId, year, month);
+  const summary = await Report.computeSummary(AppState.memberId, year, month);
 
   document.getElementById("monthlySummaryTitle").textContent = `${month + 1}월 누계`;
   document.getElementById("calStatVisit").innerHTML = `${summary.visitCount}<span class="stat-unit">회</span>`;
@@ -113,23 +118,27 @@ let familyAddMode = false;
 const MAX_FAMILY_MEMBERS = 6;
 let draggedMemberId = null;
 
-function countMemberRecords(memberId) {
-  return Storage.getVisits().filter(v => v.memberId === memberId).length
-    + Storage.getSymptoms().filter(s => s.memberId === memberId && s.hasSymptom).length
-    + Storage.getPrescriptions(memberId).length
-    + Storage.getCheckups(memberId).length;
+async function countMemberRecords(memberId) {
+  const [visits, symptoms, prescriptions, checkups] = await Promise.all([
+    Storage.getVisits(), Storage.getSymptoms(), Storage.getPrescriptions(memberId), Storage.getCheckups(memberId)
+  ]);
+  return visits.filter(v => v.memberId === memberId).length
+    + symptoms.filter(s => s.memberId === memberId && s.hasSymptom).length
+    + prescriptions.length
+    + checkups.length;
 }
 
-function renderFamilyList() {
+async function renderFamilyList() {
   const el = document.getElementById("familyList");
   if (!el) return;
 
-  const members = Storage.getFamilyMembers();
-  const itemsHtml = members.map(m => `
+  const members = await Storage.getFamilyMembers();
+  const counts = await Promise.all(members.map(m => countMemberRecords(m.id)));
+  const itemsHtml = members.map((m, i) => `
     <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}" draggable="true">
       <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.relation || m.nickname || "?").charAt(0))}</span>
       ${Storage.escapeHtml(m.nickname || m.relation || "관계 없음")}
-      <span class="family-count">${countMemberRecords(m.id)}건</span>
+      <span class="family-count">${counts[i]}건</span>
     </div>`).join("");
 
   const atLimit = members.length >= MAX_FAMILY_MEMBERS;
@@ -150,15 +159,15 @@ function renderFamilyList() {
   el.innerHTML = itemsHtml + addHtml;
 }
 
-function updateTopbarIdentity() {
-  const member = Storage.getFamilyMember(AppState.memberId);
+async function updateTopbarIdentity() {
+  const member = await Storage.getFamilyMember(AppState.memberId);
   const nameEl = document.getElementById("patientName");
   if (nameEl) nameEl.textContent = member ? (member.nickname || member.relation || "구성원") : "";
 }
 
-function refreshFamilyIdentity() {
-  renderFamilyList();
-  updateTopbarIdentity();
+async function refreshFamilyIdentity() {
+  await renderFamilyList();
+  await updateTopbarIdentity();
 }
 window.refreshFamilyIdentity = refreshFamilyIdentity;
 
@@ -177,17 +186,19 @@ function formatYearMonthDay(dateKey) {
   return `${y}년 ${m}월 ${d}일`;
 }
 
-function computeUpcoming(memberId) {
+async function computeUpcoming(memberId) {
   const today = new Date(REAL_TODAY.getFullYear(), REAL_TODAY.getMonth(), REAL_TODAY.getDate());
   const items = [];
 
-  Storage.getCheckups(memberId).forEach(c => {
+  const [checkups, visits] = await Promise.all([Storage.getCheckups(memberId), Storage.getVisits()]);
+
+  checkups.forEach(c => {
     if (!c.date || c.status === "완료") return;
     const days = Math.round((new Date(c.date) - today) / 86400000);
     if (days > 0 && days <= 60) items.push({ label: c.name || "접종·검진", date: c.date, days });
   });
 
-  Storage.getVisits().filter(v => v.memberId === memberId && v.nextVisitDate).forEach(v => {
+  visits.filter(v => v.memberId === memberId && v.nextVisitDate).forEach(v => {
     const days = Math.round((new Date(v.nextVisitDate) - today) / 86400000);
     if (days > 0 && days <= 60) items.push({ label: `${v.hospital || "병원"} 다음 예약`, date: v.nextVisitDate, days });
   });
@@ -196,11 +207,11 @@ function computeUpcoming(memberId) {
   return items;
 }
 
-function renderUpcomingBanner() {
+async function renderUpcomingBanner() {
   const banner = document.getElementById("upcomingBanner");
   if (!banner) return;
 
-  const items = computeUpcoming(AppState.memberId);
+  const items = await computeUpcoming(AppState.memberId);
   if (!items.length) {
     banner.classList.remove("show");
     banner.innerHTML = "";
@@ -221,7 +232,7 @@ function renderUpcomingBanner() {
 
 window.recordViewMode = "daily";
 
-function renderRecordList() {
+async function renderRecordList() {
   const el = document.getElementById("recordBodyList");
   if (!el) return;
 
@@ -229,22 +240,25 @@ function renderRecordList() {
   const memberId = AppState.memberId;
   const rows = [];
 
-  const symptom = Storage.getSymptom(dateKey, memberId);
+  const [symptom, visits, prescriptions, checkups] = await Promise.all([
+    Storage.getSymptom(dateKey, memberId), Storage.getVisits(), Storage.getPrescriptions(memberId), Storage.getCheckups(memberId)
+  ]);
+
   if (symptom && symptom.hasSymptom) {
     const tagText = (symptom.tags || []).join(", ") || "증상 있음";
     rows.push({ badge: "증상", badgeClass: "badge-neutral", text: `<strong>${Storage.escapeHtml(tagText)}</strong>${symptom.painLevel ? ` · 통증 ${symptom.painLevel}` : ""}${symptom.temperature ? ` · ${symptom.temperature}℃` : ""}` });
   }
 
-  Storage.getVisits().filter(v => v.memberId === memberId && v.date === dateKey).forEach(v => {
+  visits.filter(v => v.memberId === memberId && v.date === dateKey).forEach(v => {
     rows.push({ badge: "병원방문", badgeClass: "badge-blue", text: `<strong>${Storage.escapeHtml(v.hospital || "병원")}</strong>${v.department ? ` · ${Storage.escapeHtml(v.department)}` : ""}${v.time ? ` · ${v.time}` : ""}` });
   });
 
-  Storage.getPrescriptions(memberId).filter(p => p.startDate && dateKey >= p.startDate && dateKey <= (p.endDate || p.startDate)).forEach(p => {
+  prescriptions.filter(p => p.startDate && dateKey >= p.startDate && dateKey <= (p.endDate || p.startDate)).forEach(p => {
     const count = (p.items || []).length;
     rows.push({ badge: "처방전", badgeClass: "badge-neutral", text: `<strong>약 ${count}종</strong>${p.items && p.items[0] ? ` · ${Storage.escapeHtml(p.items[0].drugName)} 외` : ""}` });
   });
 
-  Storage.getCheckups(memberId).filter(c => c.date === dateKey).forEach(c => {
+  checkups.filter(c => c.date === dateKey).forEach(c => {
     rows.push({ badge: "접종·검진", badgeClass: "badge-green", text: `<strong>${Storage.escapeHtml(c.name || "")}</strong>${c.status ? ` · ${Storage.escapeHtml(c.status)}` : ""}` });
   });
 
@@ -271,12 +285,12 @@ function goToTab(tab) {
   setView(tab);
 }
 
-function renderTodayVisits() {
+async function renderTodayVisits() {
   const el = document.getElementById("todayVisitBody");
   if (!el) return;
 
   const dateKey = Storage.toDateKey(AppState.selectedDate);
-  const visits = Storage.getVisits().filter(v => v.memberId === AppState.memberId && v.date === dateKey);
+  const visits = (await Storage.getVisits()).filter(v => v.memberId === AppState.memberId && v.date === dateKey);
 
   if (!visits.length) {
     el.innerHTML = `
@@ -310,12 +324,12 @@ function renderTodayVisits() {
     </div>`).join("");
 }
 
-function renderTodayRx() {
+async function renderTodayRx() {
   const el = document.getElementById("todayRxBody");
   if (!el) return;
 
   const dateKey = Storage.toDateKey(AppState.selectedDate);
-  const prescriptions = Storage.getPrescriptions(AppState.memberId)
+  const prescriptions = (await Storage.getPrescriptions(AppState.memberId))
     .filter(p => p.startDate && dateKey >= p.startDate && dateKey <= (p.endDate || p.startDate));
 
   if (!prescriptions.length) {
@@ -381,15 +395,15 @@ function bindTodayRecordActions() {
   });
 }
 
-function buildReportSummaryText() {
+async function buildReportSummaryText() {
   const period = document.querySelector("#reportPeriodToggle button.active")?.dataset.period || "month";
   const year = calendarState.year;
   const month = calendarState.month;
-  const member = Storage.getFamilyMember(AppState.memberId);
+  const member = await Storage.getFamilyMember(AppState.memberId);
   const summary = period === "month"
-    ? Report.computeSummary(AppState.memberId, year, month)
-    : Report.computeSummary(AppState.memberId, year, null);
-  const deptRows = Report.computeDeptBreakdown(AppState.memberId, year);
+    ? await Report.computeSummary(AppState.memberId, year, month)
+    : await Report.computeSummary(AppState.memberId, year, null);
+  const deptRows = await Report.computeDeptBreakdown(AppState.memberId, year);
   const periodLabel = period === "month" ? `${year}년 ${month + 1}월` : `${year}년`;
 
   const lines = [`${periodLabel} 통계 · 리포트 (${member ? member.relation : "구성원"})`, ""];
@@ -398,7 +412,7 @@ function buildReportSummaryText() {
   lines.push(`- 증상 기록: ${summary.symptomDays}일`);
   lines.push(`- 접종·검진: ${summary.checkupCount}건`);
   if (deptRows.length) {
-    lines.push("", `진료과별 · ${today.getFullYear()}년`);
+    lines.push("", `진료과별 · ${year}년`);
     deptRows.forEach(r => lines.push(`- ${r.name}: ${r.count}회`));
   }
   return lines.join("\n");
@@ -406,7 +420,7 @@ function buildReportSummaryText() {
 
 const SEARCH_BADGE = { visit: ["병원방문", "badge-blue"], rx: ["처방전", "badge-neutral"], checkup: ["접종·검진", "badge-green"], symptom: ["증상", "badge-neutral"] };
 
-function searchRecords(query) {
+async function searchRecords(query) {
   const keywords = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!keywords.length) return [];
 
@@ -415,8 +429,12 @@ function searchRecords(query) {
 
   const matches = text => keywords.every(k => text.toLowerCase().includes(k));
 
+  const [visits, prescriptions, checkups, symptoms] = await Promise.all([
+    Storage.getVisits(), Storage.getPrescriptions(memberId), Storage.getCheckups(memberId), Storage.getSymptoms()
+  ]);
+
   // 검색어가 실제 진단명(진료 메모)과 일치하면 그 병명으로 진단받은 병원방문 기록만 보여준다
-  const diagnosisMatches = Storage.getVisits()
+  const diagnosisMatches = visits
     .filter(v => v.memberId === memberId && v.diagnosisMemo && matches(v.diagnosisMemo))
     .map(v => ({ type: "visit", date: v.date, text: `<strong>${Storage.escapeHtml(v.hospital || "")}</strong>${v.department ? ` · ${Storage.escapeHtml(v.department)}` : ""}` }));
   if (diagnosisMatches.length) {
@@ -424,28 +442,28 @@ function searchRecords(query) {
     return diagnosisMatches.slice(0, 20);
   }
 
-  Storage.getVisits().filter(v => v.memberId === memberId).forEach(v => {
+  visits.filter(v => v.memberId === memberId).forEach(v => {
     const blob = [v.hospital, v.department, v.doctor, v.diagnosisMemo].filter(Boolean).join(" ");
     if (matches(blob)) {
       results.push({ type: "visit", date: v.date, text: `<strong>${Storage.escapeHtml(v.hospital || "")}</strong>${v.department ? ` · ${Storage.escapeHtml(v.department)}` : ""}` });
     }
   });
 
-  Storage.getPrescriptions(memberId).forEach(p => {
+  prescriptions.forEach(p => {
     const blob = [(p.items || []).map(it => it.drugName).join(" "), p.cautionMemo].filter(Boolean).join(" ");
     if (matches(blob)) {
       results.push({ type: "rx", date: p.startDate, text: `<strong>${Storage.escapeHtml((p.items || []).map(it => it.drugName).join(", "))}</strong>` });
     }
   });
 
-  Storage.getCheckups(memberId).forEach(c => {
+  checkups.forEach(c => {
     const blob = [c.name, c.category, c.resultMemo].filter(Boolean).join(" ");
     if (matches(blob)) {
       results.push({ type: "checkup", date: c.date, text: `<strong>${Storage.escapeHtml(c.name || "")}</strong>${c.category ? ` · ${Storage.escapeHtml(c.category)}` : ""}` });
     }
   });
 
-  Storage.getSymptoms().filter(s => s.memberId === memberId && s.hasSymptom).forEach(s => {
+  symptoms.filter(s => s.memberId === memberId && s.hasSymptom).forEach(s => {
     const blob = [(s.tags || []).join(" "), s.action].filter(Boolean).join(" ");
     if (matches(blob)) {
       results.push({ type: "symptom", date: s.date, text: `<strong>${Storage.escapeHtml((s.tags || []).join(", ") || "증상")}</strong>${s.action ? ` · ${Storage.escapeHtml(s.action)}` : ""}` });
@@ -456,7 +474,7 @@ function searchRecords(query) {
   return results.slice(0, 20);
 }
 
-function renderSearchResults(query) {
+async function renderSearchResults(query) {
   const panel = document.getElementById("aiSearchResults");
   if (!panel) return;
 
@@ -466,7 +484,7 @@ function renderSearchResults(query) {
     return;
   }
 
-  const results = searchRecords(query);
+  const results = await searchRecords(query);
   panel.classList.add("open");
 
   if (!results.length) {
@@ -493,7 +511,7 @@ function bindAiSearch() {
   input.addEventListener("input", () => renderSearchResults(input.value));
   input.addEventListener("focus", () => { if (input.value.trim()) renderSearchResults(input.value); });
 
-  panel.addEventListener("click", e => {
+  panel.addEventListener("click", async e => {
     const item = e.target.closest(".ai-search-item[data-date]");
     if (!item || !item.dataset.date) return;
 
@@ -503,9 +521,9 @@ function bindAiSearch() {
     const tabByType = { visit: "visit", rx: "rx", checkup: "checkup", symptom: "today" };
     const tab = tabByType[item.dataset.type] || "today";
     document.querySelectorAll(".subtab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-    if (currentSection !== "diary") setSection("diary");
+    if (currentSection !== "diary") await setSection("diary");
     setView(tab);
-    window.refreshAll();
+    await window.refreshAll();
 
     input.value = "";
     panel.classList.remove("open");
@@ -524,9 +542,9 @@ function bindTopbarActions() {
     window.print();
   });
 
-  document.getElementById("sendMailBtn").addEventListener("click", () => {
+  document.getElementById("sendMailBtn").addEventListener("click", async () => {
     const subject = "건강비서 - 통계 · 리포트";
-    const body = buildReportSummaryText();
+    const body = await buildReportSummaryText();
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   });
 }
@@ -574,24 +592,23 @@ function setView(view) {
   }
 }
 
-window.refreshAll = function refreshAll() {
-  renderCalendar();
+window.refreshAll = async function refreshAll() {
+  await Promise.all([renderCalendar(), Symptoms.render()]);
   renderRecordDate();
-  renderUpcomingBanner();
-  Symptoms.render();
-  renderTodayVisits();
-  renderTodayRx();
-  if (window.recordViewMode === "list") renderRecordList();
-  if (currentView === "visit") Visits.render();
-  if (currentView === "rx") Prescriptions.render();
-  if (currentView === "checkup") Checkups.render();
-  if (currentView === "report") Report.render();
-  if (currentSection === "profile") Profile.render();
-  if (currentSection === "biorhythm") LifeLogs.render();
-  refreshFamilyIdentity();
+  await renderUpcomingBanner();
+  await renderTodayVisits();
+  await renderTodayRx();
+  if (window.recordViewMode === "list") await renderRecordList();
+  if (currentView === "visit") await Visits.render();
+  if (currentView === "rx") await Prescriptions.render();
+  if (currentView === "checkup") await Checkups.render();
+  if (currentView === "report") await Report.render();
+  if (currentSection === "profile") await Profile.render();
+  if (currentSection === "biorhythm") await LifeLogs.render();
+  await refreshFamilyIdentity();
 };
 
-function setSection(section) {
+async function setSection(section) {
   currentSection = section;
   document.querySelectorAll(".nav-item[data-view]").forEach(item => {
     item.classList.toggle("active", item.dataset.view === section);
@@ -600,16 +617,16 @@ function setSection(section) {
   document.getElementById("profileSection").style.display = section === "profile" ? "flex" : "none";
   document.getElementById("biorhythmSection").style.display = section === "biorhythm" ? "flex" : "none";
   document.getElementById("pageName").textContent = SECTION_LABEL[section];
-  if (section === "profile") Profile.render();
-  if (section === "biorhythm") LifeLogs.render();
+  if (section === "profile") await Profile.render();
+  if (section === "biorhythm") await LifeLogs.render();
 }
 
 function bindLifeDateNav() {
-  const shiftDay = delta => {
+  const shiftDay = async delta => {
     const d = new Date(AppState.selectedDate);
     d.setDate(d.getDate() + delta);
     AppState.selectedDate = d;
-    window.refreshAll();
+    await window.refreshAll();
   };
   document.getElementById("lifeDatePrev").addEventListener("click", () => shiftDay(-1));
   document.getElementById("lifeDateNext").addEventListener("click", () => shiftDay(1));
@@ -619,11 +636,11 @@ function bindLifeDateNav() {
     if (typeof picker.showPicker === "function") picker.showPicker();
     else picker.focus();
   });
-  picker.addEventListener("change", () => {
+  picker.addEventListener("change", async () => {
     if (!picker.value) return;
     const [y, m, d] = picker.value.split("-").map(Number);
     AppState.selectedDate = new Date(y, m - 1, d);
-    window.refreshAll();
+    await window.refreshAll();
   });
 }
 
@@ -715,13 +732,13 @@ function bindSubtabs() {
   });
 }
 
-function bindFamilySwitch() {
-  document.getElementById("familyList").addEventListener("click", e => {
+async function bindFamilySwitch() {
+  document.getElementById("familyList").addEventListener("click", async e => {
     const memberEl = e.target.closest(".family-item[data-member]");
     if (memberEl) {
       AppState.memberId = memberEl.dataset.member;
       AppState.visitFilterDate = null;
-      window.refreshAll();
+      await window.refreshAll();
       return;
     }
 
@@ -730,24 +747,24 @@ function bindFamilySwitch() {
     const action = actionEl.dataset.action;
 
     if (action === "open-add-member") {
-      if (Storage.getFamilyMembers().length >= MAX_FAMILY_MEMBERS) return;
+      if ((await Storage.getFamilyMembers()).length >= MAX_FAMILY_MEMBERS) return;
       familyAddMode = true;
-      renderFamilyList();
+      await renderFamilyList();
     } else if (action === "cancel-add-member") {
       familyAddMode = false;
-      renderFamilyList();
+      await renderFamilyList();
     } else if (action === "save-add-member") {
-      if (Storage.getFamilyMembers().length >= MAX_FAMILY_MEMBERS) {
+      if ((await Storage.getFamilyMembers()).length >= MAX_FAMILY_MEMBERS) {
         familyAddMode = false;
-        renderFamilyList();
+        await renderFamilyList();
         return;
       }
       const form = actionEl.closest(".family-add-form");
       const relation = form.querySelector('[data-field="relation"]').value;
       const nickname = form.querySelector('[data-field="nickname"]').value.trim();
-      Storage.addFamilyMember({ relation, nickname });
+      await Storage.addFamilyMember({ relation, nickname });
       familyAddMode = false;
-      renderFamilyList();
+      await renderFamilyList();
     }
   });
 
@@ -774,15 +791,15 @@ function bindFamilySwitch() {
     if (memberEl) memberEl.classList.remove("drag-over");
   });
 
-  familyListEl.addEventListener("drop", e => {
+  familyListEl.addEventListener("drop", async e => {
     const memberEl = e.target.closest(".family-item[data-member]");
     if (!memberEl || !draggedMemberId) return;
     e.preventDefault();
     memberEl.classList.remove("drag-over");
     const targetId = memberEl.dataset.member;
     if (targetId !== draggedMemberId) {
-      Storage.reorderFamilyMembers(draggedMemberId, targetId);
-      renderFamilyList();
+      await Storage.reorderFamilyMembers(draggedMemberId, targetId);
+      await renderFamilyList();
     }
   });
 
@@ -825,30 +842,37 @@ function bindExclusiveToggle(selector) {
   });
 }
 
-Storage.seedIfEmpty();
-renderCalendar();
-renderRecordDate();
-renderUpcomingBanner();
-renderTodayVisits();
-renderTodayRx();
-refreshFamilyIdentity();
-Symptoms.render();
-Visits.init();
-Profile.init();
-Prescriptions.init();
-Checkups.init();
-Report.init();
-LifeLogs.init();
-setView("today");
+window.initApp = async function initApp() {
+  await Storage.seedIfEmpty();
+  await renderCalendar();
+  renderRecordDate();
+  await renderUpcomingBanner();
+  await renderTodayVisits();
+  await renderTodayRx();
+  await refreshFamilyIdentity();
+  await Symptoms.render();
+  if (!boundOnce) {
+    Visits.init();
+    Profile.init();
+    Prescriptions.init();
+    Checkups.init();
+    Report.init();
+    LifeLogs.init();
+    bindCalendarNav();
+    bindLifeDateNav();
+    bindMonthPicker();
+    bindSubtabs();
+    await bindFamilySwitch();
+    bindTodayRecordActions();
+    bindTopNav();
+    bindTabLinks();
+    bindRecordViewToggle();
+    bindTopbarActions();
+    bindAiSearch();
+    bindExclusiveToggle(".view-toggle");
+    boundOnce = true;
+  }
+  setView("today");
+};
 
-bindCalendarNav();
-bindLifeDateNav();
-bindMonthPicker();
-bindSubtabs();
-bindFamilySwitch();
-bindTodayRecordActions();
-bindTopNav();
-bindTabLinks();
-bindRecordViewToggle();
-bindTopbarActions();
-bindAiSearch();
+window.initApp();

@@ -2,8 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>건강비서 — 건강일기</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2C6BA8">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="건강비서">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -96,6 +102,7 @@
           <span class="legend-item"><span class="legend-dot" style="background:#7E6BB0;"></span>처방전</span>
           <span class="legend-item"><span class="legend-dot" style="background:#C08A5E;"></span>증상</span>
           <span class="legend-item"><span class="legend-dot" style="background:#5B9E7E;"></span>접종·검진</span>
+          <span class="legend-item legend-life"><span class="legend-dot" style="background:#AE5480;"></span>생활 기록</span>
         </div>
 
         <div class="monthly-summary">
@@ -283,5 +290,6 @@
 <script src="js/report.js"></script>
 <script src="js/lifelogs.js"></script>
 <script src="js/main.js"></script>
+<script src="js/pwa.js"></script>
 </body>
 </html>

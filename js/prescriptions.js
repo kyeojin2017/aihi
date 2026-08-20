@@ -16,17 +16,13 @@ const Prescriptions = (() => {
     });
   }
 
-  function refresh() {
-    if (typeof window.refreshAll === "function") window.refreshAll();
-    else render();
+  async function refresh() {
+    if (typeof window.refreshAll === "function") await window.refreshAll();
+    else await render();
   }
 
-  function findVisit(id) {
-    return Storage.getVisits().find(v => v.id === id) || null;
-  }
-
-  function findPrescription(id) {
-    return Storage.getPrescriptions(AppState.memberId).find(p => p.id === id) || null;
+  function findVisit(visits, id) {
+    return visits.find(v => v.id === id) || null;
   }
 
   function formatDateFull(dateKey) {
@@ -40,13 +36,15 @@ const Prescriptions = (() => {
     return `${y}년 ${m}월`;
   }
 
-  function render() {
+  async function render() {
     const listEl = document.getElementById("rxList");
     if (!listEl) return;
 
-    const all = Storage.getPrescriptions(AppState.memberId)
+    const [allRaw, visits] = await Promise.all([Storage.getPrescriptions(AppState.memberId), Storage.getVisits()]);
+    const all = allRaw
       .slice()
       .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+    const memberVisits = visits.filter(v => v.memberId === AppState.memberId);
     const selectedDateKey = Storage.toDateKey(AppState.selectedDate);
     const isDailyView = window.recordViewMode === "daily";
     const filtered = AppState.rxFilterMonth
@@ -65,10 +63,11 @@ const Prescriptions = (() => {
       filterChip.style.display = "none";
     }
 
-    const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findPrescription(formMode.edit) : null) : "";
+    const editingRecord = formMode && typeof formMode === "object" ? all.find(p => p.id === formMode.edit) : null;
+    const formHtml = formMode ? renderForm(editingRecord, memberVisits) : "";
     const itemsHtml = filtered
       .filter(p => !(formMode && typeof formMode === "object" && formMode.edit === p.id))
-      .map(renderCard)
+      .map(p => renderCard(p, visits))
       .join("");
 
     if (!formHtml && filtered.length === 0) {
@@ -81,8 +80,8 @@ const Prescriptions = (() => {
     }
   }
 
-  function renderCard(p) {
-    const visit = p.visitId ? findVisit(p.visitId) : null;
+  function renderCard(p, visits) {
+    const visit = p.visitId ? findVisit(visits, p.visitId) : null;
     const items = p.items || [];
     return `
       <div class="card card-accent-purple rx-card">
@@ -114,13 +113,12 @@ const Prescriptions = (() => {
       </div>`;
   }
 
-  function renderForm(existing) {
+  function renderForm(existing, memberVisits) {
     const p = existing || { visitId: "", startDate: Storage.toDateKey(AppState.selectedDate), endDate: "", cautionMemo: "" };
     if (existing) draftItems = (existing.items && existing.items.length ? existing.items : [{ drugName: "", dose: "", frequency: "", note: "" }]);
     else if (!draftItems.length) draftItems = [{ drugName: "", dose: "", frequency: "", note: "" }];
 
-    const visits = Storage.getVisits().filter(v => v.memberId === AppState.memberId)
-      .slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    const visits = memberVisits.slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
     return `
       <div class="card card-accent-purple rx-card" data-editing-id="${existing ? existing.id : ""}">
@@ -179,7 +177,7 @@ const Prescriptions = (() => {
     });
   }
 
-  function onListClick(e) {
+  async function onListClick(e) {
     const actionEl = e.target.closest("[data-action]");
     if (!actionEl) return;
     const action = actionEl.dataset.action;
@@ -189,8 +187,8 @@ const Prescriptions = (() => {
       render();
     } else if (action === "delete") {
       if (window.confirm("이 처방전 기록을 삭제할까요?")) {
-        Storage.deletePrescription(actionEl.dataset.id);
-        refresh();
+        await Storage.deletePrescription(actionEl.dataset.id);
+        await refresh();
       }
     } else if (action === "cancel") {
       formMode = null;
@@ -218,12 +216,12 @@ const Prescriptions = (() => {
       data.items = draftItems.filter(it => it.drugName && it.drugName.trim());
 
       const editingId = cardEl.dataset.editingId;
-      if (editingId) Storage.updatePrescription(editingId, data);
-      else Storage.addPrescription(AppState.memberId, data);
+      if (editingId) await Storage.updatePrescription(editingId, data);
+      else await Storage.addPrescription(AppState.memberId, data);
 
       formMode = null;
       draftItems = [];
-      refresh();
+      await refresh();
     }
   }
 

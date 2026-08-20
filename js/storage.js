@@ -29,12 +29,12 @@ const Storage = (() => {
     return `${y}-${m}-${d}`;
   }
 
-  function getVisits() {
+  async function getVisits() {
     return read("visits");
   }
 
-  function addVisit(visit) {
-    const list = getVisits();
+  async function addVisit(visit) {
+    const list = await getVisits();
     const now = new Date().toISOString();
     const rec = { id: uid(), createdAt: now, updatedAt: now, ...visit };
     list.push(rec);
@@ -42,8 +42,8 @@ const Storage = (() => {
     return rec;
   }
 
-  function updateVisit(id, patch) {
-    const list = getVisits();
+  async function updateVisit(id, patch) {
+    const list = await getVisits();
     const idx = list.findIndex(v => v.id === id);
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
@@ -51,20 +51,20 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function deleteVisit(id) {
-    write("visits", getVisits().filter(v => v.id !== id));
+  async function deleteVisit(id) {
+    write("visits", (await getVisits()).filter(v => v.id !== id));
   }
 
-  function getSymptoms() {
+  async function getSymptoms() {
     return read("symptoms");
   }
 
-  function getSymptom(date, memberId) {
-    return getSymptoms().find(s => s.date === date && s.memberId === memberId) || null;
+  async function getSymptom(date, memberId) {
+    return (await getSymptoms()).find(s => s.date === date && s.memberId === memberId) || null;
   }
 
-  function saveSymptom(date, memberId, patch) {
-    const list = getSymptoms();
+  async function saveSymptom(date, memberId, patch) {
+    const list = await getSymptoms();
     const idx = list.findIndex(s => s.date === date && s.memberId === memberId);
     const now = new Date().toISOString();
     if (idx === -1) {
@@ -84,16 +84,16 @@ const Storage = (() => {
   }
 
   // 생활 바이오리듬 — 날짜 + 구성원당 1건 (Supabase 교체 시 upsert 한 번으로 대응)
-  function getLifeLogs() {
+  async function getLifeLogs() {
     return read("lifeLogs");
   }
 
-  function getLifeLog(date, memberId) {
-    return getLifeLogs().find(l => l.date === date && l.memberId === memberId) || null;
+  async function getLifeLog(date, memberId) {
+    return (await getLifeLogs()).find(l => l.date === date && l.memberId === memberId) || null;
   }
 
-  function saveLifeLog(date, memberId, patch) {
-    const list = getLifeLogs();
+  async function saveLifeLog(date, memberId, patch) {
+    const list = await getLifeLogs();
     const idx = list.findIndex(l => l.date === date && l.memberId === memberId);
     const now = new Date().toISOString();
     if (idx === -1) {
@@ -116,11 +116,11 @@ const Storage = (() => {
   }
 
   // 생리 주기 — 구성원당 1건 (마지막 시작일 + 평균 주기로 다음 예정일 계산)
-  function getPeriodSettings(memberId) {
+  async function getPeriodSettings(memberId) {
     return read("periodSettings").find(p => p.memberId === memberId) || null;
   }
 
-  function savePeriodSettings(memberId, patch) {
+  async function savePeriodSettings(memberId, patch) {
     const list = read("periodSettings");
     const idx = list.findIndex(p => p.memberId === memberId);
     const now = new Date().toISOString();
@@ -140,16 +140,16 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function getFamilyMembers() {
+  async function getFamilyMembers() {
     return read("familyMembers");
   }
 
-  function getFamilyMember(id) {
-    return getFamilyMembers().find(m => m.id === id) || null;
+  async function getFamilyMember(id) {
+    return (await getFamilyMembers()).find(m => m.id === id) || null;
   }
 
-  function addFamilyMember(data) {
-    const list = getFamilyMembers();
+  async function addFamilyMember(data) {
+    const list = await getFamilyMembers();
     const now = new Date().toISOString();
     const rec = {
       id: uid(),
@@ -164,8 +164,8 @@ const Storage = (() => {
     return rec;
   }
 
-  function updateFamilyMember(id, patch) {
-    const list = getFamilyMembers();
+  async function updateFamilyMember(id, patch) {
+    const list = await getFamilyMembers();
     const idx = list.findIndex(m => m.id === id);
     if (idx === -1) return null;
     const next = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
@@ -175,8 +175,8 @@ const Storage = (() => {
     return list[idx];
   }
 
-  function reorderFamilyMembers(draggedId, targetId) {
-    const list = getFamilyMembers();
+  async function reorderFamilyMembers(draggedId, targetId) {
+    const list = await getFamilyMembers();
     const fromIdx = list.findIndex(m => m.id === draggedId);
     const toIdx = list.findIndex(m => m.id === targetId);
     if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
@@ -186,10 +186,10 @@ const Storage = (() => {
   }
 
   function makeList(storeKey) {
-    function getAll(memberId) {
+    async function getAll(memberId) {
       return read(storeKey).filter(x => x.memberId === memberId);
     }
-    function add(memberId, item) {
+    async function add(memberId, item) {
       const list = read(storeKey);
       const now = new Date().toISOString();
       const rec = { id: uid(), memberId, createdAt: now, updatedAt: now, ...item };
@@ -197,7 +197,7 @@ const Storage = (() => {
       write(storeKey, list);
       return rec;
     }
-    function update(id, patch) {
+    async function update(id, patch) {
       const list = read(storeKey);
       const idx = list.findIndex(x => x.id === id);
       if (idx === -1) return null;
@@ -205,7 +205,7 @@ const Storage = (() => {
       write(storeKey, list);
       return list[idx];
     }
-    function remove(id) {
+    async function remove(id) {
       write(storeKey, read(storeKey).filter(x => x.id !== id));
     }
     return { getAll, add, update, remove };
@@ -219,21 +219,21 @@ const Storage = (() => {
   const periodEntriesStore = makeList("periodEntries");
 
   // 실제로 입력한 생리 시작일만 기록 — 같은 날짜가 이미 있으면 건너뛴다
-  function recordPeriodEntry(memberId, date) {
+  async function recordPeriodEntry(memberId, date) {
     if (!date) return;
-    const exists = periodEntriesStore.getAll(memberId).some(e => e.date === date);
-    if (!exists) periodEntriesStore.add(memberId, { date });
+    const exists = (await periodEntriesStore.getAll(memberId)).some(e => e.date === date);
+    if (!exists) await periodEntriesStore.add(memberId, { date });
   }
 
-  function deletePeriodEntry(memberId, date) {
+  async function deletePeriodEntry(memberId, date) {
     if (!date) return;
-    const match = periodEntriesStore.getAll(memberId).find(e => e.date === date);
-    if (match) periodEntriesStore.remove(match.id);
+    const match = (await periodEntriesStore.getAll(memberId)).find(e => e.date === date);
+    if (match) await periodEntriesStore.remove(match.id);
   }
 
-  function seedIfEmpty() {
-    if (getVisits().length === 0) {
-      addVisit({
+  async function seedIfEmpty() {
+    if ((await getVisits()).length === 0) {
+      await addVisit({
         memberId: "self",
         date: "2026-08-08",
         time: "09:40",
@@ -244,8 +244,8 @@ const Storage = (() => {
         diagnosisMemo: "급성 인두염 소견. 신속항원 음성, CRP 정상 범위. 3일 내 열 지속되면 재방문 권유."
       });
     }
-    if (!getSymptom("2026-08-08", "self")) {
-      saveSymptom("2026-08-08", "self", {
+    if (!(await getSymptom("2026-08-08", "self"))) {
+      await saveSymptom("2026-08-08", "self", {
         hasSymptom: true,
         tags: ["인후통", "오한"],
         painLevel: 3,
@@ -253,8 +253,8 @@ const Storage = (() => {
         action: "타이레놀 1정 14:20 · 수분 1.2L"
       });
     }
-    if (!getLifeLog("2026-08-08", "self")) {
-      saveLifeLog("2026-08-08", "self", {
+    if (!(await getLifeLog("2026-08-08", "self"))) {
+      await saveLifeLog("2026-08-08", "self", {
         meals: [
           { time: "08:10", memo: "죽, 계란찜" },
           { time: "12:40", memo: "미역국, 흰밥" },
@@ -272,7 +272,7 @@ const Storage = (() => {
         memo: "미열로 산책만 짧게. 커피는 쉬었음."
       });
     }
-    if (getFamilyMembers().length === 0) {
+    if ((await getFamilyMembers()).length === 0) {
       write("familyMembers", [
         {
           id: "self", name: "김하늘", relation: "본인", nickname: "", avatarLabel: "본",
@@ -291,25 +291,25 @@ const Storage = (() => {
         }
       ]);
     }
-    const existingMembers = getFamilyMembers();
+    const existingMembers = await getFamilyMembers();
     const needsAvatarFix = existingMembers.some(m => m.relation && m.avatarLabel !== m.relation.charAt(0));
     if (needsAvatarFix) {
       write("familyMembers", existingMembers.map(m => (
         m.relation ? { ...m, avatarLabel: m.relation.charAt(0) } : m
       )));
     }
-    if (conditionsStore.getAll("self").length === 0) {
-      conditionsStore.add("self", { name: "알레르기성 비염", memo: "환절기에 증상이 심해짐" });
+    if ((await conditionsStore.getAll("self")).length === 0) {
+      await conditionsStore.add("self", { name: "알레르기성 비염", memo: "환절기에 증상이 심해짐" });
     }
-    if (medicationsStore.getAll("self").length === 0) {
-      medicationsStore.add("self", { name: "타이레놀", dosage: "500mg", frequency: "필요 시", memo: "두통·발열 시 복용" });
+    if ((await medicationsStore.getAll("self")).length === 0) {
+      await medicationsStore.add("self", { name: "타이레놀", dosage: "500mg", frequency: "필요 시", memo: "두통·발열 시 복용" });
     }
-    if (supplementsStore.getAll("self").length === 0) {
-      supplementsStore.add("self", { name: "비타민D", dosage: "1000IU", frequency: "1일 1회", memo: "아침 식후" });
+    if ((await supplementsStore.getAll("self")).length === 0) {
+      await supplementsStore.add("self", { name: "비타민D", dosage: "1000IU", frequency: "1일 1회", memo: "아침 식후" });
     }
-    if (prescriptionsStore.getAll("self").length === 0) {
-      const visit = getVisits().find(v => v.memberId === "self");
-      prescriptionsStore.add("self", {
+    if ((await prescriptionsStore.getAll("self")).length === 0) {
+      const visit = (await getVisits()).find(v => v.memberId === "self");
+      await prescriptionsStore.add("self", {
         visitId: visit ? visit.id : null,
         startDate: "2026-08-08",
         endDate: "2026-08-12",
@@ -321,11 +321,11 @@ const Storage = (() => {
         ]
       });
     }
-    if (checkupsStore.getAll("self").length === 0) {
-      checkupsStore.add("self", { type: "vaccine", category: "필수", name: "인플루엔자 4가", date: "2025-10-15", status: "완료", resultMemo: "" });
-      checkupsStore.add("self", { type: "vaccine", category: "필수", name: "코로나19 추가접종", date: "2025-11-20", status: "완료", resultMemo: "" });
-      checkupsStore.add("self", { type: "screening", category: "국가", name: "일반 건강검진", date: "2026-04-10", status: "완료", resultMemo: "콜레스테롤 경계, 6개월 뒤 재검." });
-      checkupsStore.add("self", { type: "screening", category: "개인", name: "갑상선 초음파", date: "2026-06-02", status: "완료", resultMemo: "갑상선 결절 0.4cm 경과관찰." });
+    if ((await checkupsStore.getAll("self")).length === 0) {
+      await checkupsStore.add("self", { type: "vaccine", category: "필수", name: "인플루엔자 4가", date: "2025-10-15", status: "완료", resultMemo: "" });
+      await checkupsStore.add("self", { type: "vaccine", category: "필수", name: "코로나19 추가접종", date: "2025-11-20", status: "완료", resultMemo: "" });
+      await checkupsStore.add("self", { type: "screening", category: "국가", name: "일반 건강검진", date: "2026-04-10", status: "완료", resultMemo: "콜레스테롤 경계, 6개월 뒤 재검." });
+      await checkupsStore.add("self", { type: "screening", category: "개인", name: "갑상선 초음파", date: "2026-06-02", status: "완료", resultMemo: "갑상선 결절 0.4cm 경과관찰." });
     }
   }
 

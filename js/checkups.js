@@ -14,13 +14,13 @@ const Checkups = (() => {
     });
   }
 
-  function refresh() {
-    if (typeof window.refreshAll === "function") window.refreshAll();
-    else render();
+  async function refresh() {
+    if (typeof window.refreshAll === "function") await window.refreshAll();
+    else await render();
   }
 
-  function findCheckup(id) {
-    return Storage.getCheckups(AppState.memberId).find(c => c.id === id) || null;
+  async function findCheckup(id) {
+    return (await Storage.getCheckups(AppState.memberId)).find(c => c.id === id) || null;
   }
 
   function formatDateFull(dateKey) {
@@ -84,11 +84,11 @@ const Checkups = (() => {
       </div>`;
   }
 
-  function render() {
+  async function render() {
     const listEl = document.getElementById("checkupList");
     if (!listEl) return;
 
-    const allRaw = Storage.getCheckups(AppState.memberId).slice();
+    const allRaw = (await Storage.getCheckups(AppState.memberId)).slice();
     populateYearSelect(allRaw);
 
     document.getElementById("checkupCount").textContent = `${allRaw.length}건`;
@@ -102,7 +102,7 @@ const Checkups = (() => {
     const screenings = all.filter(c => c.type === "screening");
     const vaccines = all.filter(c => c.type !== "screening");
 
-    const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? findCheckup(formMode.edit) : null) : "";
+    const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? await findCheckup(formMode.edit) : null) : "";
     const groupsHtml =
       renderGroup("건강검진", "badge-blue", screenings, `${selectedYear}년에 건강검진 기록이 없습니다.`) +
       renderGroup("예방접종", "badge-green", vaccines, `${selectedYear}년에 예방접종 기록이 없습니다.`);
@@ -169,7 +169,7 @@ const Checkups = (() => {
       </div>`;
   }
 
-  function onListClick(e) {
+  async function onListClick(e) {
     const typeBtn = e.target.closest("#checkupTypeToggle button[data-type]");
     if (typeBtn) {
       const group = typeBtn.closest("#checkupTypeToggle");
@@ -188,8 +188,8 @@ const Checkups = (() => {
       render();
     } else if (action === "delete") {
       if (window.confirm("이 접종·검진 기록을 삭제할까요?")) {
-        Storage.deleteCheckup(actionEl.dataset.id);
-        refresh();
+        await Storage.deleteCheckup(actionEl.dataset.id);
+        await refresh();
       }
     } else if (action === "cancel") {
       formMode = null;
@@ -204,11 +204,11 @@ const Checkups = (() => {
       }
 
       const editingId = cardEl.dataset.editingId;
-      if (editingId) Storage.updateCheckup(editingId, data);
-      else Storage.addCheckup(AppState.memberId, data);
+      if (editingId) await Storage.updateCheckup(editingId, data);
+      else await Storage.addCheckup(AppState.memberId, data);
 
       formMode = null;
-      refresh();
+      await refresh();
     }
   }
 
