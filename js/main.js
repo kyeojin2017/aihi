@@ -628,12 +628,12 @@ function bindCalendarNav() {
   document.getElementById("calendarPrev").addEventListener("click", () => {
     calendarState.month -= 1;
     if (calendarState.month < 0) { calendarState.month = 11; calendarState.year -= 1; }
-    renderCalendar();
+    window.refreshAll();
   });
   document.getElementById("calendarNext").addEventListener("click", () => {
     calendarState.month += 1;
     if (calendarState.month > 11) { calendarState.month = 0; calendarState.year += 1; }
-    renderCalendar();
+    window.refreshAll();
   });
   document.getElementById("calendarDays").addEventListener("click", e => {
     const cell = e.target.closest(".day-cell");
