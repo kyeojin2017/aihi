@@ -563,6 +563,7 @@ a:hover { color: var(--primary-dark); }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .card-head-left { display: flex; align-items: center; gap: 10px; }
 .card-title { font-size: 16px; font-weight: 600; }
+.card-title-sub { font-size: 13px; font-weight: 400; color: var(--muted); }
 .card-subtitle { font-size: 13px; color: var(--muted); }
 .card-link { font-size: 13px; color: var(--primary); flex: 0 0 auto; cursor: pointer; }
 
