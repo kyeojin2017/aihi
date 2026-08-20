@@ -566,7 +566,8 @@ button.stat-value.active { color: var(--primary); }
 .record-date .meta { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
 .record-actions { display: flex; gap: 8px; flex: 0 0 auto; }
 
-.record-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
+.record-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; overflow: auto; scrollbar-width: none; }
+.record-body::-webkit-scrollbar { display: none; }
 
 .upcoming-banner {
   display: none; flex-direction: column; gap: 10px; padding: 14px 16px;
