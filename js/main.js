@@ -119,7 +119,7 @@ function renderSummaryPanel() {
 }
 
 let familyAddMode = false;
-const MAX_FAMILY_MEMBERS = 5;
+const MAX_FAMILY_MEMBERS = 6;
 let draggedMemberId = null;
 
 function countMemberRecords(memberId) {
