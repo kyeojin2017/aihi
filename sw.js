@@ -1,13 +1,23 @@
-const CACHE_NAME = "health-diary-v1";
+const CACHE_NAME = "health-diary-v2";
 const CORE_ASSETS = [
   "./",
   "./index.html",
+  "./login.html",
+  "./reset-password.html",
   "./css/style.css",
   "./js/storage.js",
   "./js/symptoms.js",
   "./js/visits.js",
+  "./js/checkups.js",
+  "./js/prescriptions.js",
+  "./js/profile.js",
+  "./js/report.js",
+  "./js/lifelogs.js",
   "./js/main.js",
   "./js/auth.js",
+  "./js/login.js",
+  "./js/resetPassword.js",
+  "./js/pwa.js",
   "./js/supabaseConfig.js",
   "./js/supabaseClient.js",
   "./manifest.json"
