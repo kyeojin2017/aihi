@@ -978,6 +978,7 @@ button.stat-value.active { color: var(--primary); }
 .visit-view-title .card-title { font-size: 20px; }
 .visit-count { font-size: 13.5px; color: var(--muted); }
 .visit-view-actions { display: flex; align-items: center; gap: 10px; }
+.visit-view-actions select.field-box { width: auto; min-width: 84px; }
 
 .filter-chip {
   display: none;

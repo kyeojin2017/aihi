@@ -1,6 +1,7 @@
 const Checkups = (() => {
   let formMode = null; // null | "add" | { edit: id }
   let selectedYear = new Date().getFullYear();
+  let selectedMonth = null; // null = 전체, 1~12
 
   function init() {
     document.getElementById("addCheckupBtn").addEventListener("click", () => {
@@ -10,6 +11,10 @@ const Checkups = (() => {
     document.getElementById("checkupList").addEventListener("click", onListClick);
     document.getElementById("checkupYearSelect").addEventListener("change", e => {
       selectedYear = Number(e.target.value);
+      render();
+    });
+    document.getElementById("checkupMonthSelect").addEventListener("change", e => {
+      selectedMonth = e.target.value ? Number(e.target.value) : null;
       render();
     });
   }
@@ -73,6 +78,15 @@ const Checkups = (() => {
     select.innerHTML = sorted.map(y => `<option value="${y}"${y === selectedYear ? " selected" : ""}>${y}년</option>`).join("");
   }
 
+  function populateMonthSelect() {
+    const select = document.getElementById("checkupMonthSelect");
+    if (!select) return;
+    const options = [`<option value=""${selectedMonth === null ? " selected" : ""}>전체 달</option>`]
+      .concat(Array.from({ length: 12 }, (_, i) => i + 1)
+        .map(m => `<option value="${m}"${m === selectedMonth ? " selected" : ""}>${m}월</option>`));
+    select.innerHTML = options.join("");
+  }
+
   function renderGroup(title, badgeClass, items, emptyMsg) {
     return `
       <div class="checkup-group">
@@ -90,12 +104,14 @@ const Checkups = (() => {
 
     const allRaw = (await Storage.getCheckups(AppState.memberId)).slice();
     populateYearSelect(allRaw);
+    populateMonthSelect();
 
     document.getElementById("checkupCount").textContent = `${allRaw.length}건`;
     renderUpcomingBanner(allRaw);
 
+    const periodLabel = selectedMonth === null ? `${selectedYear}년` : `${selectedYear}년 ${selectedMonth}월`;
     const all = allRaw
-      .filter(c => c.date && Number(c.date.slice(0, 4)) === selectedYear)
+      .filter(c => c.date && Number(c.date.slice(0, 4)) === selectedYear && (selectedMonth === null || Number(c.date.slice(5, 7)) === selectedMonth))
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .filter(c => !(formMode && typeof formMode === "object" && formMode.edit === c.id));
 
@@ -104,8 +120,8 @@ const Checkups = (() => {
 
     const formHtml = formMode ? renderForm(formMode && typeof formMode === "object" ? await findCheckup(formMode.edit) : null) : "";
     const groupsHtml =
-      renderGroup("건강검진", "badge-blue", screenings, `${selectedYear}년에 건강검진 기록이 없습니다.`) +
-      renderGroup("예방접종", "badge-green", vaccines, `${selectedYear}년에 예방접종 기록이 없습니다.`);
+      renderGroup("건강검진", "badge-blue", screenings, `${periodLabel}에 건강검진 기록이 없습니다.`) +
+      renderGroup("예방접종", "badge-green", vaccines, `${periodLabel}에 예방접종 기록이 없습니다.`);
 
     listEl.innerHTML = formHtml + groupsHtml;
   }
