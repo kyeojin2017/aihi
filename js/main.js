@@ -118,45 +118,38 @@ let familyAddMode = false;
 const MAX_FAMILY_MEMBERS = 6;
 let draggedMemberId = null;
 
-async function countMemberRecords(memberId) {
-  const [visits, symptoms, prescriptions, checkups] = await Promise.all([
-    Storage.getVisits(), Storage.getSymptoms(), Storage.getPrescriptions(memberId), Storage.getCheckups(memberId)
-  ]);
-  return visits.filter(v => v.memberId === memberId).length
-    + symptoms.filter(s => s.memberId === memberId && s.hasSymptom).length
-    + prescriptions.length
-    + checkups.length;
-}
-
 async function renderFamilyList() {
   const el = document.getElementById("familyList");
+  const addPanelEl = document.getElementById("familyAddPanel");
   if (!el) return;
 
   const members = await Storage.getFamilyMembers();
-  const counts = await Promise.all(members.map(m => countMemberRecords(m.id)));
-  const itemsHtml = members.map((m, i) => `
+  const itemsHtml = members.map(m => `
     <div class="family-item${m.id === AppState.memberId ? " active" : ""}" data-member="${m.id}" draggable="true">
       <span class="family-avatar">${Storage.escapeHtml(m.avatarLabel || (m.relation || m.nickname || "?").charAt(0))}</span>
       ${Storage.escapeHtml(m.nickname || m.relation || "관계 없음")}
-      <span class="family-count">${counts[i]}건</span>
     </div>`).join("");
 
   const atLimit = members.length >= MAX_FAMILY_MEMBERS;
-  const addHtml = familyAddMode && !atLimit ? `
-    <div class="family-add-form">
-      <select class="field-box" data-field="relation">
-        ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
-      </select>
-      <input type="text" class="field-box" data-field="nickname" placeholder="이름이나 별명을 입력 (안 넣어도 됨)">
-      <div class="btn-row">
-        <button type="button" class="btn" data-action="cancel-add-member">취소</button>
-        <button type="button" class="btn btn-primary" data-action="save-add-member">추가</button>
-      </div>
-    </div>` : atLimit
+  const triggerHtml = atLimit
     ? `<div class="family-item family-add-disabled">최대 ${MAX_FAMILY_MEMBERS}명까지 등록할 수 있습니다</div>`
     : `<div class="family-item family-add" data-action="open-add-member"><span class="family-avatar">+</span>구성원 추가</div>`;
 
-  el.innerHTML = itemsHtml + addHtml;
+  el.innerHTML = itemsHtml + triggerHtml;
+
+  if (addPanelEl) {
+    addPanelEl.innerHTML = familyAddMode && !atLimit ? `
+      <div class="family-add-form">
+        <select class="field-box" data-field="relation">
+          ${["배우자", "자녀", "부모", "형제자매", "기타"].map(r => `<option value="${r}">${r}</option>`).join("")}
+        </select>
+        <input type="text" class="field-box" data-field="nickname" placeholder="이름이나 별명을 입력 (안 넣어도 됨)">
+        <div class="btn-row">
+          <button type="button" class="btn" data-action="cancel-add-member">취소</button>
+          <button type="button" class="btn btn-primary" data-action="save-add-member">추가</button>
+        </div>
+      </div>` : "";
+  }
 }
 
 async function updateTopbarIdentity() {
@@ -575,7 +568,27 @@ function bindTopbarActions() {
 
     await Report.renderPrintable(AppState.memberId, year, month, memberLabel);
     document.body.classList.add("printing-report");
-    window.print();
+
+    const isNativeApp = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (isNativeApp) {
+      // Android WebView's print adapter ignores @media print and captures whatever is
+      // actually on screen, so swap the visible content directly instead of relying on it.
+      const appShell = document.querySelector(".app-shell");
+      const printEl = document.getElementById("printReport");
+      const prevAppShellDisplay = appShell.style.display;
+      const prevPrintDisplay = printEl.style.display;
+      appShell.style.display = "none";
+      printEl.style.display = "block";
+      try {
+        await window.Capacitor.Plugins.PrintBridge.print();
+      } finally {
+        appShell.style.display = prevAppShellDisplay;
+        printEl.style.display = prevPrintDisplay;
+        document.body.classList.remove("printing-report");
+      }
+    } else {
+      window.print();
+    }
   });
 
   window.addEventListener("afterprint", () => {
@@ -773,41 +786,44 @@ function bindSubtabs() {
   });
 }
 
-async function bindFamilySwitch() {
-  document.getElementById("familyList").addEventListener("click", async e => {
-    const memberEl = e.target.closest(".family-item[data-member]");
-    if (memberEl) {
-      AppState.memberId = memberEl.dataset.member;
-      AppState.visitFilterDate = null;
-      await window.refreshAll();
+async function onFamilyPanelClick(e) {
+  const memberEl = e.target.closest(".family-item[data-member]");
+  if (memberEl) {
+    AppState.memberId = memberEl.dataset.member;
+    AppState.visitFilterDate = null;
+    await window.refreshAll();
+    return;
+  }
+
+  const actionEl = e.target.closest("[data-action]");
+  if (!actionEl) return;
+  const action = actionEl.dataset.action;
+
+  if (action === "open-add-member") {
+    if ((await Storage.getFamilyMembers()).length >= MAX_FAMILY_MEMBERS) return;
+    familyAddMode = true;
+    await renderFamilyList();
+  } else if (action === "cancel-add-member") {
+    familyAddMode = false;
+    await renderFamilyList();
+  } else if (action === "save-add-member") {
+    if ((await Storage.getFamilyMembers()).length >= MAX_FAMILY_MEMBERS) {
+      familyAddMode = false;
+      await renderFamilyList();
       return;
     }
+    const form = actionEl.closest(".family-add-form");
+    const relation = form.querySelector('[data-field="relation"]').value;
+    const nickname = form.querySelector('[data-field="nickname"]').value.trim();
+    await Storage.addFamilyMember({ relation, nickname });
+    familyAddMode = false;
+    await renderFamilyList();
+  }
+}
 
-    const actionEl = e.target.closest("[data-action]");
-    if (!actionEl) return;
-    const action = actionEl.dataset.action;
-
-    if (action === "open-add-member") {
-      if ((await Storage.getFamilyMembers()).length >= MAX_FAMILY_MEMBERS) return;
-      familyAddMode = true;
-      await renderFamilyList();
-    } else if (action === "cancel-add-member") {
-      familyAddMode = false;
-      await renderFamilyList();
-    } else if (action === "save-add-member") {
-      if ((await Storage.getFamilyMembers()).length >= MAX_FAMILY_MEMBERS) {
-        familyAddMode = false;
-        await renderFamilyList();
-        return;
-      }
-      const form = actionEl.closest(".family-add-form");
-      const relation = form.querySelector('[data-field="relation"]').value;
-      const nickname = form.querySelector('[data-field="nickname"]').value.trim();
-      await Storage.addFamilyMember({ relation, nickname });
-      familyAddMode = false;
-      await renderFamilyList();
-    }
-  });
+async function bindFamilySwitch() {
+  document.getElementById("familyList").addEventListener("click", onFamilyPanelClick);
+  document.getElementById("familyAddPanel").addEventListener("click", onFamilyPanelClick);
 
   const familyListEl = document.getElementById("familyList");
 
@@ -884,7 +900,10 @@ function bindExclusiveToggle(selector) {
 }
 
 window.initApp = async function initApp() {
-  await Storage.seedIfEmpty();
+  const members = await Storage.ensureDefaultMember();
+  if (!members.some(m => m.id === AppState.memberId)) {
+    AppState.memberId = members[0].id;
+  }
   await renderCalendar();
   renderRecordDate();
   await renderUpcomingBanner();

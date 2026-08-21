@@ -70,7 +70,10 @@ const Profile = (() => {
         <div class="card-head-left">
           <span class="card-title">기본 정보${info.relation ? ` <span class="card-title-sub">(${Storage.escapeHtml(info.relation)})</span>` : ""}</span>
         </div>
-        <span class="card-link" data-action="edit-info">수정</span>
+        <span style="display:flex; gap:10px;">
+          <span class="card-link" data-action="edit-info">수정</span>
+          <span class="card-link danger" data-action="delete-member">구성원 삭제</span>
+        </span>
       </div>
       <div class="visit-grid">
         <div class="field"><span class="field-label">이름·별명</span><span class="field-box">${Storage.escapeHtml(info.nickname || "-")}</span></div>
@@ -200,6 +203,22 @@ const Profile = (() => {
       editingInfo = false;
       await renderInfoCard();
       if (typeof window.refreshFamilyIdentity === "function") await window.refreshFamilyIdentity();
+      return;
+    }
+    if (action === "delete-member") {
+      const members = await Storage.getFamilyMembers();
+      if (members.length <= 1) {
+        window.alert("최소 한 명의 구성원은 남아있어야 합니다.");
+        return;
+      }
+      const info = (await Storage.getFamilyMember(AppState.memberId)) || {};
+      const label = info.nickname || info.relation || "이 구성원";
+      if (!window.confirm(`${label}을(를) 삭제하시겠습니까?\n병원 방문, 처방전, 접종 등 이 구성원의 모든 기록이 함께 영구 삭제되며 되돌릴 수 없습니다.`)) return;
+
+      await Storage.deleteFamilyMember(AppState.memberId);
+      const remaining = members.filter(m => m.id !== AppState.memberId);
+      AppState.memberId = remaining[0].id;
+      await window.refreshAll();
       return;
     }
 

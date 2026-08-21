@@ -191,8 +191,6 @@ a:hover { color: var(--primary-dark); }
 .sidebar .family-add .family-avatar { background: transparent; }
 .sidebar .nav-dot { background: #47543A; }
 
-.family-count { margin-left: auto; font-size: 11.5px; color: var(--muted-soft); }
-.family-item.active .family-count { color: var(--muted); }
 
 .family-add { color: var(--muted); cursor: pointer; }
 .family-add .family-avatar {
@@ -212,7 +210,7 @@ a:hover { color: var(--primary-dark); }
 
 .family-add-form { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px 4px; }
 .family-add-form input.field-box,
-.family-add-form select.field-box { padding: 7px 10px; font-size: 13px; }
+.family-add-form select.field-box { padding: 7px 10px; font-size: 13px; color: #1E241A; background: #fff; }
 .family-add-form .btn-row { display: flex; gap: 8px; }
 .family-add-form .btn-row .btn { flex: 1; padding: 6px 0; font-size: 12.5px; text-align: center; }
 
@@ -824,9 +822,10 @@ button.stat-value.active { color: var(--primary); }
 .symptom-hint { color: var(--muted); font-size: 13.5px; padding: 6px 0; }
 
 .period-grid { grid-template-columns: repeat(3, minmax(0, 140px)); gap: 12px; margin-top: 12px; }
-.period-grid .field-box { padding: 7px 10px; font-size: 13px; }
+.period-grid .field-box { padding: 11px 13px; font-size: 16px; }
+.period-grid .field-label { font-size: 13.5px; }
 .period-next {
-  margin-top: 12px;
+  margin-top: 28px;
   padding: 10px 18px;
   border-radius: 999px;
   background: #FAEAF2;
@@ -1565,12 +1564,15 @@ button.metric-icon { cursor: pointer; }
   .brand { display: none; }
 
   .family {
-    order: 0;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
     flex: 0 0 auto;
-    border-top: none;
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
     background: var(--panel-bg);
-    padding: 8px 12px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     margin: 0;
   }
   .family-label { display: none; }
@@ -1580,6 +1582,9 @@ button.metric-icon { cursor: pointer; }
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    padding-right: 8px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 20px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 20px), transparent 100%);
   }
   .family-list::-webkit-scrollbar { display: none; }
   .family-item {
@@ -1593,20 +1598,36 @@ button.metric-icon { cursor: pointer; }
     white-space: nowrap;
   }
   .family-item.active { border-color: var(--primary); }
-  .family-count { margin-left: 4px; }
+
+  /* 구성원 추가 폼 — 좁은 가족 바 안에 욱여넣지 않고 화면 위에 뜨는 카드로 */
+  .family-add-form {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(56px + 62px + env(safe-area-inset-bottom) + 14px);
+    z-index: 40;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    gap: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  }
+  .family-add-form input.field-box,
+  .family-add-form select.field-box { padding: 10px 12px; font-size: 15px; }
+  .family-add-form .btn-row .btn { padding: 10px 0; font-size: 14px; }
 
   .nav {
     order: 9;
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    z-index: 30;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+    z-index: 29;
     flex-direction: row;
     gap: 0;
     background: var(--white);
     border-top: 1px solid var(--border);
-    padding-bottom: env(safe-area-inset-bottom);
   }
   .nav-item {
     flex: 1;
@@ -1625,7 +1646,8 @@ button.metric-icon { cursor: pointer; }
     order: 1;
     flex: 1;
     min-height: 0;
-    padding-bottom: calc(62px + env(safe-area-inset-bottom));
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(62px + 56px + env(safe-area-inset-bottom));
   }
 
   /* 상단 바 — 검색과 내보내기 버튼은 모바일에서 접어둔다 */
@@ -1633,7 +1655,10 @@ button.metric-icon { cursor: pointer; }
   .topbar-title .page-name { font-size: 16px; }
   .topbar-title .patient-name { font-size: 12.5px; }
   .ai-search { display: none; }
-  .topbar-actions .btn { display: none; }
+  .topbar-actions .btn:not(.avatar-badge) { display: none; }
+  .avatar-badge { padding: 8px; gap: 0; min-width: 36px; justify-content: center; }
+  .avatar-badge-label { display: none; }
+  .logout-heart { width: 19px; height: 19px; }
 
   .subtabs {
     height: 48px;
@@ -1686,6 +1711,31 @@ button.metric-icon { cursor: pointer; }
   .field-inline { margin-left: 0; }
   .field-value.grow { flex: 1 1 100%; }
 
+  /* 월경 입력 — 3열이 좁아서 뭉개지므로 한 줄씩 세로로 쌓는다 */
+  .period-inputs .period-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .period-inputs .period-grid .field-box { font-size: 13px; }
+
+  /* 입력/연간 달력을 좌우 2단으로 두면 각자 너무 좁아지므로 세로로 쌓는다 */
+  .period-split { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .period-projection { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 14px; }
+
+  /* 다음 생리 예정일 — 라벨·날짜·디데이 한 줄로, 가운데 정렬 */
+  .period-next { flex-direction: row; align-items: baseline; justify-content: center; gap: 8px; padding: 8px 14px; width: 100%; }
+  .period-next-label { font-size: 12px; white-space: nowrap; }
+  .period-next-value { font-size: 15px; white-space: nowrap; }
+  .period-dday { font-size: 12px; margin-left: 0; white-space: nowrap; }
+  .period-projection-tag { display: none; }
+  .period-projection-title { font-size: 13px; white-space: nowrap; }
+  .period-projection-date { font-size: 13px; white-space: nowrap; }
+
+  /* 식사 섹션 헤더 — 식사/음주/추가 버튼은 제목 아래 줄로, 작게 */
+  .section-head { flex-wrap: wrap; }
+  .section-actions { flex-basis: 100%; margin-left: 0; gap: 6px; }
+  .section-actions .flag { padding: 4px 10px; font-size: 11.5px; }
+  .section-actions .flag-icon { width: 16px; height: 16px; }
+  .section-actions .flag-icon svg { width: 10px; height: 10px; }
+  .section-actions .chip-btn { padding: 4px 10px; font-size: 11.5px; }
+
   /* 식사 입력 — 두 줄로 나뉘므로 한 끼씩 묶어서 보이게 한다 */
   .meal-row {
     flex-wrap: wrap;
@@ -1708,13 +1758,27 @@ button.metric-icon { cursor: pointer; }
   .rx-table { overflow-x: auto; }
   .rx-row { min-width: 430px; }
 
-  .metric-grid { gap: 10px; }
-  .metric { padding: 14px; }
-  .metric-value input { font-size: 26px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .metric { padding: 12px; }
+  .metric-value input { font-size: 24px; }
+  .tone-sleep .metric-value input,
+  .tone-caffeine .metric-value input { font-size: 24px; }
+  .tone-water .metric-value input { font-size: 24px; }
+  .tone-sleep .metric-unit,
+  .tone-caffeine .metric-unit,
+  .tone-exercise .metric-unit { font-size: 15px; }
+  .tone-water .metric-unit { font-size: 15px; }
   .metric-hint { font-size: 11px; }
+  .metric-head-row { flex-wrap: nowrap; gap: 6px; }
+  .metric-intensity-inline { flex-wrap: nowrap; gap: 3px; min-width: 0; }
+  .metric-intensity-label { display: none; }
+  .metric-intensity-inline .type-chip.mini { padding: 2px 6px; font-size: 11px; }
 
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .photo-grid { grid-template-columns: 1fr 1fr; }
+
+  .profile-page, .life-page { padding: 14px 16px; }
+  .profile-lists { grid-template-columns: minmax(0, 1fr); }
 
   /* 터치 영역 확보 */
   .btn, .toggle-btn, .tag, .pain-btn { min-height: 38px; }

@@ -1,19 +1,4 @@
 const Storage = (() => {
-  const NS = "healthDiary";
-
-  function read(key) {
-    try {
-      const raw = localStorage.getItem(`${NS}.${key}`);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function write(key, data) {
-    localStorage.setItem(`${NS}.${key}`, JSON.stringify(data));
-  }
-
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
@@ -29,150 +14,98 @@ const Storage = (() => {
     return `${y}-${m}-${d}`;
   }
 
-  async function getVisits() {
-    return read("visits");
+  function nowIso() {
+    return new Date().toISOString();
   }
 
-  async function addVisit(visit) {
-    const list = await getVisits();
-    const now = new Date().toISOString();
-    const rec = { id: uid(), createdAt: now, updatedAt: now, ...visit };
-    list.push(rec);
-    write("visits", list);
-    return rec;
+  async function currentUserId() {
+    const { data } = await supabaseClient.auth.getSession();
+    return data.session ? data.session.user.id : null;
   }
 
-  async function updateVisit(id, patch) {
-    const list = await getVisits();
-    const idx = list.findIndex(v => v.id === id);
-    if (idx === -1) return null;
-    list[idx] = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
-    write("visits", list);
-    return list[idx];
+  // Converts a DB row (snake_case) into a JS object (camelCase) using [dbKey, jsKey] pairs.
+  function mapRow(row, pairs) {
+    const out = {};
+    pairs.forEach(([dbKey, jsKey]) => { out[jsKey] = row[dbKey]; });
+    return out;
   }
 
-  async function deleteVisit(id) {
-    write("visits", (await getVisits()).filter(v => v.id !== id));
+  // Converts a partial JS object (camelCase) into a DB row patch (snake_case), only including
+  // keys that are actually present in obj so partial updates/upserts behave like a merge.
+  function toRow(obj, pairs) {
+    const out = {};
+    pairs.forEach(([dbKey, jsKey]) => {
+      if (obj[jsKey] !== undefined) out[dbKey] = obj[jsKey];
+    });
+    return out;
   }
 
-  async function getSymptoms() {
-    return read("symptoms");
+  function throwIfError(error) {
+    if (error) throw error;
   }
 
-  async function getSymptom(date, memberId) {
-    return (await getSymptoms()).find(s => s.date === date && s.memberId === memberId) || null;
-  }
+  // ---- family members ----
 
-  async function saveSymptom(date, memberId, patch) {
-    const list = await getSymptoms();
-    const idx = list.findIndex(s => s.date === date && s.memberId === memberId);
-    const now = new Date().toISOString();
-    if (idx === -1) {
-      const rec = {
-        id: uid(), date, memberId,
-        hasSymptom: null, tags: [], painLevel: null, temperature: null, action: "",
-        createdAt: now, updatedAt: now,
-        ...patch
-      };
-      list.push(rec);
-      write("symptoms", list);
-      return rec;
-    }
-    list[idx] = { ...list[idx], ...patch, updatedAt: now };
-    write("symptoms", list);
-    return list[idx];
-  }
-
-  // 생활 바이오리듬 — 날짜 + 구성원당 1건 (Supabase 교체 시 upsert 한 번으로 대응)
-  async function getLifeLogs() {
-    return read("lifeLogs");
-  }
-
-  async function getLifeLog(date, memberId) {
-    return (await getLifeLogs()).find(l => l.date === date && l.memberId === memberId) || null;
-  }
-
-  async function saveLifeLog(date, memberId, patch) {
-    const list = await getLifeLogs();
-    const idx = list.findIndex(l => l.date === date && l.memberId === memberId);
-    const now = new Date().toISOString();
-    if (idx === -1) {
-      const rec = {
-        id: uid(), date, memberId,
-        meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
-        sleepHours: null, waterMl: null,
-        alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
-        caffeineType: "", caffeineCustomLabel: "", caffeineCups: null, isPeriodDay: false, memo: "",
-        createdAt: now, updatedAt: now,
-        ...patch
-      };
-      list.push(rec);
-      write("lifeLogs", list);
-      return rec;
-    }
-    list[idx] = { ...list[idx], ...patch, updatedAt: now };
-    write("lifeLogs", list);
-    return list[idx];
-  }
-
-  // 생리 주기 — 구성원당 1건 (마지막 시작일 + 평균 주기로 다음 예정일 계산)
-  async function getPeriodSettings(memberId) {
-    return read("periodSettings").find(p => p.memberId === memberId) || null;
-  }
-
-  async function savePeriodSettings(memberId, patch) {
-    const list = read("periodSettings");
-    const idx = list.findIndex(p => p.memberId === memberId);
-    const now = new Date().toISOString();
-    if (idx === -1) {
-      const rec = {
-        id: uid(), memberId,
-        startDate: null, periodLength: null, cycleLength: null,
-        createdAt: now, updatedAt: now,
-        ...patch
-      };
-      list.push(rec);
-      write("periodSettings", list);
-      return rec;
-    }
-    list[idx] = { ...list[idx], ...patch, updatedAt: now };
-    write("periodSettings", list);
-    return list[idx];
-  }
+  const FAMILY_PAIRS = [
+    ["id", "id"], ["name", "name"], ["relation", "relation"], ["nickname", "nickname"],
+    ["avatar_label", "avatarLabel"], ["gender", "gender"], ["birth_date", "birthDate"],
+    ["blood_type", "bloodType"], ["height_cm", "heightCm"], ["weight_kg", "weightKg"],
+    ["created_at", "createdAt"], ["updated_at", "updatedAt"]
+  ];
 
   async function getFamilyMembers() {
-    return read("familyMembers");
+    const { data, error } = await supabaseClient
+      .from("family_members")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) { console.error(error); return []; }
+    return (data || []).map(row => mapRow(row, FAMILY_PAIRS));
   }
 
   async function getFamilyMember(id) {
-    return (await getFamilyMembers()).find(m => m.id === id) || null;
+    if (!id) return null;
+    const { data, error } = await supabaseClient.from("family_members").select("*").eq("id", id).maybeSingle();
+    if (error || !data) return null;
+    return mapRow(data, FAMILY_PAIRS);
   }
 
   async function addFamilyMember(data) {
-    const list = await getFamilyMembers();
-    const now = new Date().toISOString();
-    const rec = {
-      id: uid(),
-      name: "", relation: "", nickname: "",
-      avatarLabel: (data.relation || data.name || "?").charAt(0),
-      gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
-      createdAt: now, updatedAt: now,
-      ...data
+    const ownerId = await currentUserId();
+    const { data: existing } = await supabaseClient
+      .from("family_members").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+    const nextOrder = existing && existing.length ? (existing[0].sort_order || 0) + 1 : 0;
+    const row = {
+      owner_id: ownerId,
+      name: data.name || "",
+      relation: data.relation || "",
+      nickname: data.nickname || "",
+      avatar_label: (data.relation || data.name || "?").charAt(0),
+      gender: data.gender ?? null,
+      birth_date: data.birthDate ?? null,
+      blood_type: data.bloodType ?? null,
+      height_cm: data.heightCm ?? null,
+      weight_kg: data.weightKg ?? null,
+      sort_order: nextOrder
     };
-    list.push(rec);
-    write("familyMembers", list);
-    return rec;
+    const { data: inserted, error } = await supabaseClient.from("family_members").insert(row).select().single();
+    throwIfError(error);
+    return mapRow(inserted, FAMILY_PAIRS);
   }
 
   async function updateFamilyMember(id, patch) {
-    const list = await getFamilyMembers();
-    const idx = list.findIndex(m => m.id === id);
-    if (idx === -1) return null;
-    const next = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
-    if (next.relation) next.avatarLabel = next.relation.charAt(0);
-    list[idx] = next;
-    write("familyMembers", list);
-    return list[idx];
+    const row = toRow(patch, FAMILY_PAIRS);
+    delete row.id;
+    if (patch.relation) row.avatar_label = patch.relation.charAt(0);
+    row.updated_at = nowIso();
+    const { data, error } = await supabaseClient.from("family_members").update(row).eq("id", id).select().single();
+    throwIfError(error);
+    return mapRow(data, FAMILY_PAIRS);
+  }
+
+  async function deleteFamilyMember(id) {
+    const { error } = await supabaseClient.from("family_members").delete().eq("id", id);
+    throwIfError(error);
   }
 
   async function reorderFamilyMembers(draggedId, targetId) {
@@ -182,150 +115,402 @@ const Storage = (() => {
     if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
     const [moved] = list.splice(fromIdx, 1);
     list.splice(toIdx, 0, moved);
-    write("familyMembers", list);
+    await Promise.all(list.map((m, i) => supabaseClient.from("family_members").update({ sort_order: i }).eq("id", m.id)));
   }
 
-  function makeList(storeKey) {
-    async function getAll(memberId) {
-      return read(storeKey).filter(x => x.memberId === memberId);
-    }
-    async function add(memberId, item) {
-      const list = read(storeKey);
-      const now = new Date().toISOString();
-      const rec = { id: uid(), memberId, createdAt: now, updatedAt: now, ...item };
-      list.push(rec);
-      write(storeKey, list);
-      return rec;
-    }
-    async function update(id, patch) {
-      const list = read(storeKey);
-      const idx = list.findIndex(x => x.id === id);
-      if (idx === -1) return null;
-      list[idx] = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
-      write(storeKey, list);
-      return list[idx];
-    }
-    async function remove(id) {
-      write(storeKey, read(storeKey).filter(x => x.id !== id));
-    }
-    return { getAll, add, update, remove };
+  async function ensureDefaultMember() {
+    const members = await getFamilyMembers();
+    if (members.length) return members;
+    const created = await addFamilyMember({ relation: "본인", nickname: "" });
+    return [created];
   }
 
-  const conditionsStore = makeList("conditions");
-  const medicationsStore = makeList("medications");
-  const supplementsStore = makeList("supplements");
-  const prescriptionsStore = makeList("prescriptions");
-  const checkupsStore = makeList("checkups");
-  const periodEntriesStore = makeList("periodEntries");
+  // ---- visits ----
 
-  // 실제로 입력한 생리 시작일만 기록 — 같은 날짜가 이미 있으면 건너뛴다
+  const VISIT_PAIRS = [
+    ["id", "id"], ["member_id", "memberId"], ["date", "date"], ["time", "time"],
+    ["hospital", "hospital"], ["department", "department"], ["doctor", "doctor"],
+    ["next_visit_date", "nextVisitDate"], ["diagnosis_memo", "diagnosisMemo"],
+    ["created_at", "createdAt"], ["updated_at", "updatedAt"]
+  ];
+
+  async function getVisits() {
+    const { data, error } = await supabaseClient.from("visits").select("*");
+    if (error) { console.error(error); return []; }
+    return (data || []).map(row => mapRow(row, VISIT_PAIRS));
+  }
+
+  async function addVisit(visit) {
+    const row = toRow(visit, VISIT_PAIRS);
+    delete row.id;
+    const { data, error } = await supabaseClient.from("visits").insert(row).select().single();
+    throwIfError(error);
+    return mapRow(data, VISIT_PAIRS);
+  }
+
+  async function updateVisit(id, patch) {
+    const row = toRow(patch, VISIT_PAIRS);
+    delete row.id;
+    row.updated_at = nowIso();
+    const { data, error } = await supabaseClient.from("visits").update(row).eq("id", id).select().single();
+    throwIfError(error);
+    return mapRow(data, VISIT_PAIRS);
+  }
+
+  async function deleteVisit(id) {
+    const { error } = await supabaseClient.from("visits").delete().eq("id", id);
+    throwIfError(error);
+  }
+
+  // ---- symptoms (one row per member+date) ----
+
+  const SYMPTOM_PAIRS = [
+    ["id", "id"], ["member_id", "memberId"], ["date", "date"], ["has_symptom", "hasSymptom"],
+    ["tags", "tags"], ["pain_level", "painLevel"], ["temperature", "temperature"], ["action", "action"],
+    ["created_at", "createdAt"], ["updated_at", "updatedAt"]
+  ];
+
+  async function getSymptoms() {
+    const { data, error } = await supabaseClient.from("symptoms").select("*");
+    if (error) { console.error(error); return []; }
+    return (data || []).map(row => mapRow(row, SYMPTOM_PAIRS));
+  }
+
+  async function getSymptom(date, memberId) {
+    const { data, error } = await supabaseClient
+      .from("symptoms").select("*").eq("date", date).eq("member_id", memberId).maybeSingle();
+    if (error || !data) return null;
+    return mapRow(data, SYMPTOM_PAIRS);
+  }
+
+  async function saveSymptom(date, memberId, patch) {
+    const row = toRow(patch, SYMPTOM_PAIRS);
+    delete row.id;
+    row.date = date;
+    row.member_id = memberId;
+    row.updated_at = nowIso();
+    const { data, error } = await supabaseClient
+      .from("symptoms").upsert(row, { onConflict: "member_id,date" }).select().single();
+    throwIfError(error);
+    return mapRow(data, SYMPTOM_PAIRS);
+  }
+
+  // ---- life logs (one jsonb blob per member+date, schema is too free-form for fixed columns) ----
+
+  const DEFAULT_LIFELOG = {
+    meals: [], exerciseType: "", exerciseCustomLabel: "", exerciseIntensity: "", exerciseHours: null, exerciseMinutes: null,
+    sleepHours: null, waterMl: null,
+    alcohol: false, alcoholEntries: [], alcoholFood: "", alcoholPosition: 0,
+    caffeineType: "", caffeineCustomLabel: "", caffeineCups: null, isPeriodDay: false, memo: ""
+  };
+
+  function mapLifeLog(row) {
+    return {
+      id: row.id, memberId: row.member_id, date: row.date,
+      ...DEFAULT_LIFELOG, ...(row.data || {}),
+      createdAt: row.created_at, updatedAt: row.updated_at
+    };
+  }
+
+  async function getLifeLogs() {
+    const { data, error } = await supabaseClient.from("life_logs").select("*");
+    if (error) { console.error(error); return []; }
+    return (data || []).map(mapLifeLog);
+  }
+
+  async function getLifeLog(date, memberId) {
+    const { data, error } = await supabaseClient
+      .from("life_logs").select("*").eq("date", date).eq("member_id", memberId).maybeSingle();
+    if (error || !data) return null;
+    return mapLifeLog(data);
+  }
+
+  async function saveLifeLog(date, memberId, patch) {
+    const existing = await getLifeLog(date, memberId);
+    const merged = { ...(existing || DEFAULT_LIFELOG), ...patch };
+    delete merged.id; delete merged.memberId; delete merged.date; delete merged.createdAt; delete merged.updatedAt;
+    const row = { member_id: memberId, date, data: merged, updated_at: nowIso() };
+    const { data: result, error } = await supabaseClient
+      .from("life_logs").upsert(row, { onConflict: "member_id,date" }).select().single();
+    throwIfError(error);
+    return mapLifeLog(result);
+  }
+
+  // ---- period settings (one row per member) ----
+
+  const PERIOD_SETTINGS_PAIRS = [
+    ["id", "id"], ["member_id", "memberId"], ["start_date", "startDate"],
+    ["period_length", "periodLength"], ["cycle_length", "cycleLength"],
+    ["created_at", "createdAt"], ["updated_at", "updatedAt"]
+  ];
+
+  async function getPeriodSettings(memberId) {
+    const { data, error } = await supabaseClient
+      .from("period_settings").select("*").eq("member_id", memberId).maybeSingle();
+    if (error || !data) return null;
+    return mapRow(data, PERIOD_SETTINGS_PAIRS);
+  }
+
+  async function savePeriodSettings(memberId, patch) {
+    const row = toRow(patch, PERIOD_SETTINGS_PAIRS);
+    delete row.id;
+    row.member_id = memberId;
+    row.updated_at = nowIso();
+    const { data, error } = await supabaseClient
+      .from("period_settings").upsert(row, { onConflict: "member_id" }).select().single();
+    throwIfError(error);
+    return mapRow(data, PERIOD_SETTINGS_PAIRS);
+  }
+
+  // ---- period entries (actual recorded period-start days) ----
+
+  async function getPeriodEntries(memberId) {
+    const { data, error } = await supabaseClient.from("period_entries").select("*").eq("member_id", memberId);
+    if (error) { console.error(error); return []; }
+    return (data || []).map(row => ({ id: row.id, memberId: row.member_id, date: row.date, createdAt: row.created_at }));
+  }
+
   async function recordPeriodEntry(memberId, date) {
     if (!date) return;
-    const exists = (await periodEntriesStore.getAll(memberId)).some(e => e.date === date);
-    if (!exists) await periodEntriesStore.add(memberId, { date });
+    const { error } = await supabaseClient
+      .from("period_entries").upsert({ member_id: memberId, date }, { onConflict: "member_id,date" });
+    throwIfError(error);
   }
 
   async function deletePeriodEntry(memberId, date) {
     if (!date) return;
-    const match = (await periodEntriesStore.getAll(memberId)).find(e => e.date === date);
-    if (match) await periodEntriesStore.remove(match.id);
+    const { error } = await supabaseClient.from("period_entries").delete().eq("member_id", memberId).eq("date", date);
+    throwIfError(error);
   }
 
-  async function seedIfEmpty() {
-    if ((await getVisits()).length === 0) {
-      await addVisit({
-        memberId: "self",
-        date: "2026-08-08",
-        time: "09:40",
-        hospital: "서울연세내과의원",
-        department: "내과",
-        doctor: "박정우 원장",
-        nextVisitDate: "2026-08-13",
-        diagnosisMemo: "급성 인두염 소견. 신속항원 음성, CRP 정상 범위. 3일 내 열 지속되면 재방문 권유."
-      });
+  // ---- simple member-scoped lists (conditions / medications / supplements / checkups) ----
+
+  function makeSupaList(table, pairs) {
+    async function getAll(memberId) {
+      const { data, error } = await supabaseClient
+        .from(table).select("*").eq("member_id", memberId).order("created_at", { ascending: true });
+      if (error) { console.error(error); return []; }
+      return (data || []).map(row => mapRow(row, pairs));
     }
-    if (!(await getSymptom("2026-08-08", "self"))) {
-      await saveSymptom("2026-08-08", "self", {
-        hasSymptom: true,
-        tags: ["인후통", "오한"],
-        painLevel: 3,
-        temperature: 37.8,
-        action: "타이레놀 1정 14:20 · 수분 1.2L"
-      });
+    async function add(memberId, item) {
+      const row = toRow(item, pairs);
+      delete row.id;
+      row.member_id = memberId;
+      const { data, error } = await supabaseClient.from(table).insert(row).select().single();
+      throwIfError(error);
+      return mapRow(data, pairs);
     }
-    if (!(await getLifeLog("2026-08-08", "self"))) {
-      await saveLifeLog("2026-08-08", "self", {
-        meals: [
-          { time: "08:10", memo: "죽, 계란찜" },
-          { time: "12:40", memo: "미역국, 흰밥" },
-          { time: "19:00", memo: "누룽지" }
-        ],
-        exerciseType: "걷기",
-        exerciseHours: 0,
-        exerciseMinutes: 20,
-        sleepHours: 6.5,
-        waterMl: 1200,
-        alcohol: false,
-        caffeineType: "",
-        caffeineCups: 0,
-        isPeriodDay: false,
-        memo: "미열로 산책만 짧게. 커피는 쉬었음."
-      });
+    async function update(id, patch) {
+      const row = toRow(patch, pairs);
+      delete row.id;
+      if (pairs.some(([dbKey]) => dbKey === "updated_at")) row.updated_at = nowIso();
+      const { data, error } = await supabaseClient.from(table).update(row).eq("id", id).select().single();
+      throwIfError(error);
+      return mapRow(data, pairs);
     }
-    if ((await getFamilyMembers()).length === 0) {
-      write("familyMembers", [
-        {
-          id: "self", name: "김하늘", relation: "본인", nickname: "", avatarLabel: "본",
-          gender: "female", birthDate: "1990-05-14", bloodType: "A+", heightCm: 162, weightKg: 54,
-          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-        },
-        {
-          id: "spouse", name: "이수진", relation: "배우자", nickname: "", avatarLabel: "배",
-          gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
-          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-        },
-        {
-          id: "seojun", name: "서준", relation: "자녀", nickname: "서준", avatarLabel: "자",
-          gender: null, birthDate: null, bloodType: null, heightCm: null, weightKg: null,
-          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-        }
-      ]);
+    async function remove(id) {
+      const { error } = await supabaseClient.from(table).delete().eq("id", id);
+      throwIfError(error);
     }
-    const existingMembers = await getFamilyMembers();
-    const needsAvatarFix = existingMembers.some(m => m.relation && m.avatarLabel !== m.relation.charAt(0));
-    if (needsAvatarFix) {
-      write("familyMembers", existingMembers.map(m => (
-        m.relation ? { ...m, avatarLabel: m.relation.charAt(0) } : m
-      )));
+    return { getAll, add, update, remove };
+  }
+
+  const CONDITION_PAIRS = [["id", "id"], ["member_id", "memberId"], ["name", "name"], ["memo", "memo"], ["created_at", "createdAt"]];
+  const MEDICATION_PAIRS = [["id", "id"], ["member_id", "memberId"], ["name", "name"], ["dosage", "dosage"], ["frequency", "frequency"], ["memo", "memo"], ["created_at", "createdAt"]];
+  const SUPPLEMENT_PAIRS = MEDICATION_PAIRS;
+  const CHECKUP_PAIRS = [
+    ["id", "id"], ["member_id", "memberId"], ["type", "type"], ["category", "category"], ["name", "name"],
+    ["date", "date"], ["status", "status"], ["result_memo", "resultMemo"], ["created_at", "createdAt"], ["updated_at", "updatedAt"]
+  ];
+
+  const conditionsStore = makeSupaList("conditions", CONDITION_PAIRS);
+  const medicationsStore = makeSupaList("medications", MEDICATION_PAIRS);
+  const supplementsStore = makeSupaList("supplements", SUPPLEMENT_PAIRS);
+  const checkupsStore = makeSupaList("checkups", CHECKUP_PAIRS);
+
+  // ---- prescriptions (+ nested prescription_items) ----
+
+  const PRESCRIPTION_PAIRS = [
+    ["id", "id"], ["member_id", "memberId"], ["visit_id", "visitId"], ["start_date", "startDate"],
+    ["end_date", "endDate"], ["caution_memo", "cautionMemo"], ["created_at", "createdAt"], ["updated_at", "updatedAt"]
+  ];
+  const ITEM_PAIRS = [["id", "id"], ["drug_name", "drugName"], ["dose", "dose"], ["frequency", "frequency"], ["note", "note"]];
+
+  function mapPrescription(row) {
+    const base = mapRow(row, PRESCRIPTION_PAIRS);
+    base.items = (row.prescription_items || []).map(it => mapRow(it, ITEM_PAIRS));
+    return base;
+  }
+
+  async function getPrescriptionById(id) {
+    const { data, error } = await supabaseClient.from("prescriptions").select("*, prescription_items(*)").eq("id", id).single();
+    throwIfError(error);
+    return mapPrescription(data);
+  }
+
+  async function getPrescriptions(memberId) {
+    const { data, error } = await supabaseClient
+      .from("prescriptions").select("*, prescription_items(*)").eq("member_id", memberId)
+      .order("start_date", { ascending: false });
+    if (error) { console.error(error); return []; }
+    return (data || []).map(mapPrescription);
+  }
+
+  async function writePrescriptionItems(prescriptionId, items) {
+    const valid = (items || []).filter(it => it.drugName && it.drugName.trim());
+    if (!valid.length) return;
+    const rows = valid.map(it => {
+      const row = toRow(it, ITEM_PAIRS);
+      delete row.id;
+      row.prescription_id = prescriptionId;
+      return row;
+    });
+    const { error } = await supabaseClient.from("prescription_items").insert(rows);
+    throwIfError(error);
+  }
+
+  async function addPrescription(memberId, item) {
+    const row = toRow(item, PRESCRIPTION_PAIRS);
+    delete row.id;
+    row.member_id = memberId;
+    const { data, error } = await supabaseClient.from("prescriptions").insert(row).select().single();
+    throwIfError(error);
+    await writePrescriptionItems(data.id, item.items);
+    return getPrescriptionById(data.id);
+  }
+
+  async function updatePrescription(id, patch) {
+    const row = toRow(patch, PRESCRIPTION_PAIRS);
+    delete row.id;
+    row.updated_at = nowIso();
+    const { error } = await supabaseClient.from("prescriptions").update(row).eq("id", id);
+    throwIfError(error);
+    if (patch.items) {
+      const { error: delErr } = await supabaseClient.from("prescription_items").delete().eq("prescription_id", id);
+      throwIfError(delErr);
+      await writePrescriptionItems(id, patch.items);
     }
-    if ((await conditionsStore.getAll("self")).length === 0) {
-      await conditionsStore.add("self", { name: "알레르기성 비염", memo: "환절기에 증상이 심해짐" });
+    return getPrescriptionById(id);
+  }
+
+  async function deletePrescription(id) {
+    const { error } = await supabaseClient.from("prescriptions").delete().eq("id", id);
+    throwIfError(error);
+  }
+
+  // ---- one-time migration of legacy localStorage data (pre-Supabase) into the user's account ----
+
+  function readLegacy(key) {
+    try {
+      const raw = localStorage.getItem(`healthDiary.${key}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
     }
-    if ((await medicationsStore.getAll("self")).length === 0) {
-      await medicationsStore.add("self", { name: "타이레놀", dosage: "500mg", frequency: "필요 시", memo: "두통·발열 시 복용" });
-    }
-    if ((await supplementsStore.getAll("self")).length === 0) {
-      await supplementsStore.add("self", { name: "비타민D", dosage: "1000IU", frequency: "1일 1회", memo: "아침 식후" });
-    }
-    if ((await prescriptionsStore.getAll("self")).length === 0) {
-      const visit = (await getVisits()).find(v => v.memberId === "self");
-      await prescriptionsStore.add("self", {
-        visitId: visit ? visit.id : null,
-        startDate: "2026-08-08",
-        endDate: "2026-08-12",
-        cautionMemo: "유제품·제산제와 2시간 간격 두기. 공복 복용 금지. 복용 중 음주 금지.",
-        items: [
-          { drugName: "세파클러 캡슐", dose: "250mg", frequency: "1일 3회", note: "식후 30분" },
-          { drugName: "아세트아미노펜", dose: "500mg", frequency: "필요 시", note: "1일 최대 4정" },
-          { drugName: "레바미피드", dose: "100mg", frequency: "1일 3회", note: "위 보호" }
-        ]
-      });
-    }
-    if ((await checkupsStore.getAll("self")).length === 0) {
-      await checkupsStore.add("self", { type: "vaccine", category: "필수", name: "인플루엔자 4가", date: "2025-10-15", status: "완료", resultMemo: "" });
-      await checkupsStore.add("self", { type: "vaccine", category: "필수", name: "코로나19 추가접종", date: "2025-11-20", status: "완료", resultMemo: "" });
-      await checkupsStore.add("self", { type: "screening", category: "국가", name: "일반 건강검진", date: "2026-04-10", status: "완료", resultMemo: "콜레스테롤 경계, 6개월 뒤 재검." });
-      await checkupsStore.add("self", { type: "screening", category: "개인", name: "갑상선 초음파", date: "2026-06-02", status: "완료", resultMemo: "갑상선 결절 0.4cm 경과관찰." });
+  }
+
+  async function migrateLegacyDataIfNeeded() {
+    if (localStorage.getItem("healthDiary.migrated") === "1") return;
+    localStorage.setItem("healthDiary.migrated", "1");
+
+    const oldMembers = readLegacy("familyMembers");
+    if (!oldMembers.length) return;
+
+    try {
+      const existing = await getFamilyMembers();
+      const reusable = existing.filter(m => !m.name && !m.nickname && !m.birthDate && !m.bloodType);
+      const idMap = {};
+
+      for (const om of oldMembers) {
+        const payload = {
+          name: om.name || "", relation: om.relation || "", nickname: om.nickname || "",
+          gender: om.gender ?? null, birthDate: om.birthDate ?? null, bloodType: om.bloodType ?? null,
+          heightCm: om.heightCm ?? null, weightKg: om.weightKg ?? null
+        };
+        const target = reusable.shift();
+        idMap[om.id] = target ? (await updateFamilyMember(target.id, payload)).id : (await addFamilyMember(payload)).id;
+      }
+
+      const visitIdMap = {};
+      for (const v of readLegacy("visits")) {
+        const nm = idMap[v.memberId];
+        if (!nm) continue;
+        const created = await addVisit({
+          memberId: nm, date: v.date, time: v.time || "", hospital: v.hospital || "",
+          department: v.department || "", doctor: v.doctor || "",
+          nextVisitDate: v.nextVisitDate || null, diagnosisMemo: v.diagnosisMemo || ""
+        });
+        visitIdMap[v.id] = created.id;
+      }
+
+      for (const s of readLegacy("symptoms")) {
+        const nm = idMap[s.memberId];
+        if (!nm) continue;
+        await saveSymptom(s.date, nm, {
+          hasSymptom: s.hasSymptom, tags: s.tags || [], painLevel: s.painLevel ?? null,
+          temperature: s.temperature ?? null, action: s.action || ""
+        });
+      }
+
+      for (const l of readLegacy("lifeLogs")) {
+        const nm = idMap[l.memberId];
+        if (!nm) continue;
+        const { id, memberId, date, createdAt, updatedAt, ...rest } = l;
+        await saveLifeLog(l.date, nm, rest);
+      }
+
+      for (const p of readLegacy("periodSettings")) {
+        const nm = idMap[p.memberId];
+        if (!nm) continue;
+        await savePeriodSettings(nm, { startDate: p.startDate, periodLength: p.periodLength, cycleLength: p.cycleLength });
+      }
+
+      for (const e of readLegacy("periodEntries")) {
+        const nm = idMap[e.memberId];
+        if (!nm) continue;
+        await recordPeriodEntry(nm, e.date);
+      }
+
+      for (const c of readLegacy("conditions")) {
+        const nm = idMap[c.memberId];
+        if (!nm) continue;
+        await conditionsStore.add(nm, { name: c.name, memo: c.memo || "" });
+      }
+
+      for (const m of readLegacy("medications")) {
+        const nm = idMap[m.memberId];
+        if (!nm) continue;
+        await medicationsStore.add(nm, { name: m.name, dosage: m.dosage || "", frequency: m.frequency || "", memo: m.memo || "" });
+      }
+
+      for (const s of readLegacy("supplements")) {
+        const nm = idMap[s.memberId];
+        if (!nm) continue;
+        await supplementsStore.add(nm, { name: s.name, dosage: s.dosage || "", frequency: s.frequency || "", memo: s.memo || "" });
+      }
+
+      for (const c of readLegacy("checkups")) {
+        const nm = idMap[c.memberId];
+        if (!nm) continue;
+        await checkupsStore.add(nm, {
+          type: c.type, category: c.category || "", name: c.name, date: c.date || null,
+          status: c.status || "", resultMemo: c.resultMemo || ""
+        });
+      }
+
+      for (const p of readLegacy("prescriptions")) {
+        const nm = idMap[p.memberId];
+        if (!nm) continue;
+        await addPrescription(nm, {
+          visitId: p.visitId ? (visitIdMap[p.visitId] || null) : null,
+          startDate: p.startDate, endDate: p.endDate || null, cautionMemo: p.cautionMemo || "",
+          items: (p.items || []).map(it => ({ drugName: it.drugName, dose: it.dose || "", frequency: it.frequency || "", note: it.note || "" }))
+        });
+      }
+
+      console.log("[migration] legacy local data moved to Supabase.");
+    } catch (err) {
+      console.error("[migration] failed:", err);
     }
   }
 
@@ -335,10 +520,10 @@ const Storage = (() => {
     getSymptoms, getSymptom, saveSymptom,
     getLifeLogs, getLifeLog, saveLifeLog,
     getPeriodSettings, savePeriodSettings,
-    getPeriodEntries: periodEntriesStore.getAll,
+    getPeriodEntries,
     recordPeriodEntry,
     deletePeriodEntry,
-    getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember, reorderFamilyMembers,
+    getFamilyMembers, getFamilyMember, addFamilyMember, updateFamilyMember, deleteFamilyMember, reorderFamilyMembers,
     getConditions: conditionsStore.getAll,
     addCondition: conditionsStore.add,
     updateCondition: conditionsStore.update,
@@ -351,14 +536,12 @@ const Storage = (() => {
     addSupplement: supplementsStore.add,
     updateSupplement: supplementsStore.update,
     deleteSupplement: supplementsStore.remove,
-    getPrescriptions: prescriptionsStore.getAll,
-    addPrescription: prescriptionsStore.add,
-    updatePrescription: prescriptionsStore.update,
-    deletePrescription: prescriptionsStore.remove,
+    getPrescriptions, addPrescription, updatePrescription, deletePrescription,
     getCheckups: checkupsStore.getAll,
     addCheckup: checkupsStore.add,
     updateCheckup: checkupsStore.update,
     deleteCheckup: checkupsStore.remove,
-    seedIfEmpty
+    ensureDefaultMember,
+    migrateLegacyDataIfNeeded
   };
 })();
