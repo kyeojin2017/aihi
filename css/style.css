@@ -1522,6 +1522,34 @@ button.metric-icon { cursor: pointer; }
   .record-body, .record-body-list { overflow: visible !important; }
   .card { break-inside: avoid; box-shadow: none !important; }
 }
+
+/* ---- Combined visit + prescription PDF report ---- */
+.print-report { display: none; }
+.pr-head h1 { font-size: 20px; margin: 0 0 4px; }
+.pr-meta { font-size: 13px; color: var(--muted); }
+.pr-period { margin-top: 20px; }
+.pr-period-head { border-top: 2px solid var(--text); padding-top: 10px; }
+.pr-period-title { font-size: 16px; margin: 0; color: var(--text); }
+.pr-summary { display: flex; gap: 16px; margin: 10px 0 0; font-size: 13.5px; color: var(--text-soft); font-weight: 600; }
+.pr-section { margin-top: 18px; }
+.pr-section h3 { font-size: 14px; letter-spacing: 0.02em; margin: 0 0 8px; color: var(--text); }
+.pr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pr-table th, .pr-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+.pr-table th { background: var(--panel-bg); font-weight: 600; color: var(--text-soft); }
+.pr-table td.pr-empty { text-align: center; color: var(--muted); padding: 14px 8px; }
+
+@media print {
+  body.printing-report .app-shell { display: none !important; }
+  body.printing-report .print-report {
+    display: block !important;
+    padding: 24px;
+    background: #fff;
+    color: #000;
+  }
+  body.printing-report .pr-table { break-inside: auto; }
+  body.printing-report .pr-table tr { break-inside: avoid; }
+  body.printing-report .pr-page-break { break-before: page; }
+}
 /* =====================================================   모바일 (≤ 820px) — 사이드바를 하단 탭바로, 3단 그리드를 1단으로
    ============================================================ */
 @media (max-width: 820px) {

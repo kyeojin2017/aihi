@@ -90,6 +90,40 @@ const Report = (() => {
       }));
   }
 
+  async function computeVisitListDetailed(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    return (await Storage.getVisits())
+      .filter(v => v.memberId === memberId && inRange(v.date))
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .map(v => ({
+        date: v.date,
+        hospital: v.hospital || "-",
+        department: v.department || "-",
+        doctor: v.doctor || "-",
+        diagnosisMemo: v.diagnosisMemo || ""
+      }));
+  }
+
+  async function computePrescriptionListDetailed(memberId, year, month) {
+    const { rangeStart, rangeEnd } = getRange(year, month);
+    const inRange = inRangeFn(rangeStart, rangeEnd);
+    const [prescriptions, visits] = await Promise.all([Storage.getPrescriptions(memberId), Storage.getVisits()]);
+    return prescriptions
+      .filter(p => inRange(p.startDate))
+      .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""))
+      .map(p => {
+        const visit = p.visitId ? visits.find(v => v.id === p.visitId) : null;
+        return {
+          startDate: p.startDate,
+          endDate: p.endDate,
+          hospital: visit ? (visit.hospital || "-") : "-",
+          items: p.items || [],
+          cautionMemo: p.cautionMemo || ""
+        };
+      });
+  }
+
   async function computeSymptomBreakdown(memberId, year, month) {
     const { rangeStart, rangeEnd } = getRange(year, month);
     const inRange = inRangeFn(rangeStart, rangeEnd);
@@ -129,6 +163,96 @@ const Report = (() => {
     if (!dateKey) return "-";
     const [, m, d] = dateKey.split("-").map(Number);
     return `${m}월 ${d}일`;
+  }
+
+  function formatDateFull(dateKey) {
+    if (!dateKey) return "-";
+    const [y, m, d] = dateKey.split("-").map(Number);
+    return `${y}.${String(m).padStart(2, "0")}.${String(d).padStart(2, "0")}`;
+  }
+
+  async function buildPeriodBlock(memberId, year, month, periodLabel, breakBefore) {
+    const [summary, visits, prescriptions] = await Promise.all([
+      computeSummary(memberId, year, month),
+      computeVisitListDetailed(memberId, year, month),
+      computePrescriptionListDetailed(memberId, year, month)
+    ]);
+
+    const visitRows = visits.length ? visits.map(v => `
+        <tr>
+          <td>${Storage.escapeHtml(formatDateFull(v.date))}</td>
+          <td>${Storage.escapeHtml(v.hospital)}</td>
+          <td>${Storage.escapeHtml(v.department)}</td>
+          <td>${Storage.escapeHtml(v.doctor)}</td>
+          <td>${Storage.escapeHtml(v.diagnosisMemo || "-")}</td>
+        </tr>`).join("") : `<tr><td colspan="5" class="pr-empty">방문 기록이 없습니다.</td></tr>`;
+
+    const rxRows = prescriptions.length ? prescriptions.map(p => {
+      const period = `${formatDateFull(p.startDate)} ~ ${formatDateFull(p.endDate)}`;
+      const items = p.items.length
+        ? p.items.map(it => `${it.drugName || ""}${it.dose ? ` ${it.dose}` : ""}${it.frequency ? ` · ${it.frequency}` : ""}`).filter(Boolean).join(", ")
+        : "-";
+      return `
+        <tr>
+          <td>${Storage.escapeHtml(period)}</td>
+          <td>${Storage.escapeHtml(p.hospital)}</td>
+          <td>${Storage.escapeHtml(items)}</td>
+          <td>${Storage.escapeHtml(p.cautionMemo || "-")}</td>
+        </tr>`;
+    }).join("") : `<tr><td colspan="4" class="pr-empty">처방 기록이 없습니다.</td></tr>`;
+
+    return `
+      <div class="pr-period${breakBefore ? " pr-page-break" : ""}">
+        <div class="pr-period-head">
+          <h2 class="pr-period-title">${Storage.escapeHtml(periodLabel)} 리포트</h2>
+          <div class="pr-summary">
+            <span>병원 방문 ${summary.visitCount}회</span>
+            <span>처방 ${summary.prescriptionCount}회</span>
+            <span>증상 기록 ${summary.symptomDays}일</span>
+            <span>접종 · 검진 ${summary.checkupCount}건</span>
+          </div>
+        </div>
+        <section class="pr-section">
+          <h3>병원 방문 내역</h3>
+          <table class="pr-table">
+            <thead><tr><th>날짜</th><th>병원</th><th>진료과</th><th>담당 의사</th><th>진단 메모</th></tr></thead>
+            <tbody>${visitRows}</tbody>
+          </table>
+        </section>
+        <section class="pr-section">
+          <h3>처방약 내역</h3>
+          <table class="pr-table">
+            <thead><tr><th>처방 기간</th><th>병원</th><th>약 (용량 · 복용법)</th><th>주의 메모</th></tr></thead>
+            <tbody>${rxRows}</tbody>
+          </table>
+        </section>
+      </div>`;
+  }
+
+  async function buildPrintableHtml(memberId, year, month, memberLabel) {
+    const generatedAt = new Date();
+    const generatedLabel = `${generatedAt.getFullYear()}.${String(generatedAt.getMonth() + 1).padStart(2, "0")}.${String(generatedAt.getDate()).padStart(2, "0")} 출력`;
+    const monthLabel = `${year}년 ${month + 1}월`;
+    const yearLabel = `${year}년 전체`;
+
+    const [monthBlock, yearBlock] = await Promise.all([
+      buildPeriodBlock(memberId, year, month, monthLabel, false),
+      buildPeriodBlock(memberId, year, null, yearLabel, true)
+    ]);
+
+    return `
+      <div class="pr-head">
+        <h1>통계 · 리포트</h1>
+        <div class="pr-meta">${Storage.escapeHtml(memberLabel)} · ${Storage.escapeHtml(generatedLabel)}</div>
+      </div>
+      ${monthBlock}
+      ${yearBlock}`;
+  }
+
+  async function renderPrintable(memberId, year, month, memberLabel) {
+    const el = document.getElementById("printReport");
+    if (!el) return;
+    el.innerHTML = await buildPrintableHtml(memberId, year, month, memberLabel);
   }
 
   async function renderDeptDetail(memberId, year, month) {
@@ -263,5 +387,5 @@ const Report = (() => {
       ${detailHtml}`;
   }
 
-  return { render, init, computeSummary, computeDeptBreakdown };
+  return { render, init, computeSummary, computeDeptBreakdown, renderPrintable };
 })();

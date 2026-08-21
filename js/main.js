@@ -371,9 +371,10 @@ async function renderSideCheckupSummary() {
   const el = document.getElementById("sideCheckupList");
   if (!el) return;
 
-  const all = await Storage.getCheckups(AppState.memberId);
+  const all = (await Storage.getCheckups(AppState.memberId))
+    .filter(c => c.date && Number(c.date.slice(0, 4)) === calendarState.year);
   if (!all.length) {
-    el.innerHTML = `<div class="symptom-hint">등록된 접종·검진이 없습니다.</div>`;
+    el.innerHTML = `<div class="symptom-hint">${calendarState.year}년에 등록된 접종·검진이 없습니다.</div>`;
     return;
   }
 
@@ -566,8 +567,19 @@ function bindAiSearch() {
 }
 
 function bindTopbarActions() {
-  document.getElementById("exportPdfBtn").addEventListener("click", () => {
+  document.getElementById("exportPdfBtn").addEventListener("click", async () => {
+    const year = calendarState.year;
+    const month = calendarState.month;
+    const member = await Storage.getFamilyMember(AppState.memberId);
+    const memberLabel = member ? (member.name || member.relation) : "구성원";
+
+    await Report.renderPrintable(AppState.memberId, year, month, memberLabel);
+    document.body.classList.add("printing-report");
     window.print();
+  });
+
+  window.addEventListener("afterprint", () => {
+    document.body.classList.remove("printing-report");
   });
 
   document.getElementById("sendMailBtn").addEventListener("click", async () => {
@@ -742,7 +754,7 @@ function bindMonthPicker() {
     calendarState.year = pickerYear;
     calendarState.month = Number(btn.dataset.month);
     closeMonthPicker();
-    renderCalendar();
+    window.refreshAll();
   });
 
   document.addEventListener("click", e => {
