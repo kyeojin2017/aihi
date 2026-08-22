@@ -1,5 +1,5 @@
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const DOT_COLOR = { visit: "#2C6BA8", rx: "#7E6BB0", pain: "#C08A5E", shot: "#5B9E7E", life: "#AE5480" };
+const DOT_COLOR = { visit: "#2C6BA8", rx: "#7E6BB0", pain: "#C08A5E", shot: "#5B9E7E" };
 
 const REAL_TODAY = new Date();
 
@@ -16,7 +16,19 @@ window.AppState = {
 // and the button looks like it did nothing. Surface it instead.
 window.addEventListener("unhandledrejection", (e) => {
   console.error("Unhandled error:", e.reason);
-  const msg = (e.reason && (e.reason.message || e.reason.error_description)) || String(e.reason);
+  const reason = e.reason || {};
+  const msg = reason.message || reason.error_description || String(reason);
+
+  // Postgres 42501 = insufficient_privilege (RLS denial). This almost always means
+  // the browser's Supabase session is stale/expired — the client-side "has a
+  // session" check in auth.js can still pass with a token the server no longer
+  // honors, so every insert/update gets silently rejected as "not your row."
+  // Re-authenticating (not a code fix) is what actually resolves it.
+  if (reason.code === "42501" || /row-level security/i.test(msg)) {
+    window.alert("로그인 세션에 문제가 있어 저장하지 못했습니다. 다시 로그인해주세요.");
+    supabaseClient.auth.signOut().finally(() => { window.location.href = "login.html"; });
+    return;
+  }
   window.alert("저장/불러오기 중 오류가 발생했습니다: " + msg);
 });
 
@@ -33,22 +45,12 @@ function daysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-// 값이 하나라도 들어간 날만 캘린더에 표시한다 (빈 기록은 점을 찍지 않는다)
-function hasLifeEntry(log) {
-  return (log.meals && log.meals.length > 0) ||
-    log.sleepHours != null || log.waterMl != null ||
-    log.exerciseHours != null || log.exerciseMinutes != null ||
-    log.caffeineCups != null ||
-    log.alcohol === true || log.isPeriodDay === true ||
-    (log.memo || "").trim() !== "";
-}
-
 async function computeMarks(year, month) {
   const prefix = `${year}-${pad2(month + 1)}-`;
   const marks = {};
 
-  const [visits, symptoms, lifeLogs] = await Promise.all([
-    Storage.getVisits(), Storage.getSymptoms(), Storage.getLifeLogs()
+  const [visits, symptoms] = await Promise.all([
+    Storage.getVisits(), Storage.getSymptoms()
   ]);
 
   visits
@@ -63,13 +65,6 @@ async function computeMarks(year, month) {
     .forEach(s => {
       const day = Number(s.date.slice(8, 10));
       (marks[day] = marks[day] || new Set()).add("pain");
-    });
-
-  lifeLogs
-    .filter(l => l.memberId === AppState.memberId && l.date && l.date.startsWith(prefix) && hasLifeEntry(l))
-    .forEach(l => {
-      const day = Number(l.date.slice(8, 10));
-      (marks[day] = marks[day] || new Set()).add("life");
     });
 
   const result = {};
@@ -205,8 +200,19 @@ async function computeUpcoming(memberId) {
     if (days > 0 && days <= 60) items.push({ label: `${v.hospital || "병원"} 다음 예약`, date: v.nextVisitDate, days });
   });
 
-  items.sort((a, b) => a.days - b.days);
-  return items;
+  // Same hospital + same next-appointment date can come from more than one visit
+  // record (e.g. a follow-up date carried over across visits) — collapse those
+  // to a single banner entry instead of repeating it once per source row.
+  const seen = new Set();
+  const deduped = items.filter(it => {
+    const key = `${it.label}__${it.date}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  deduped.sort((a, b) => a.days - b.days);
+  return deduped;
 }
 
 async function renderUpcomingBanner() {
@@ -680,6 +686,15 @@ async function setSection(section) {
   document.getElementById("profileSection").style.display = section === "profile" ? "flex" : "none";
   document.getElementById("biorhythmSection").style.display = section === "biorhythm" ? "flex" : "none";
   document.getElementById("pageName").textContent = SECTION_LABEL[section];
+  if (section === "diary") {
+    AppState.selectedDate = new Date(REAL_TODAY);
+    calendarState.year = REAL_TODAY.getFullYear();
+    calendarState.month = REAL_TODAY.getMonth();
+    AppState.visitFilterDate = null;
+    AppState.visitFilterMonth = null;
+    AppState.rxFilterMonth = null;
+    await window.refreshAll();
+  }
   if (section === "profile") await Profile.render();
   if (section === "biorhythm") await LifeLogs.render();
 }
@@ -879,6 +894,8 @@ function bindTopNav() {
   document.querySelectorAll(".nav-item[data-view]").forEach(item => {
     item.addEventListener("click", () => setSection(item.dataset.view));
   });
+  const brandMark = document.querySelector(".brand-mark");
+  if (brandMark) brandMark.addEventListener("click", () => setSection("diary"));
 }
 
 function bindTabLinks() {

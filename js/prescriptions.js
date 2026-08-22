@@ -4,6 +4,22 @@ const Prescriptions = (() => {
   let ocrBusy = false;
   let ocrRawText = "";
 
+  const DOSE_UNITS = ["mg", "정", "포", "ml"];
+  const FREQUENCY_PRESETS = ["1일 1회", "1일 2회", "1일 3회", "1일 4회"];
+
+  // dose is stored as one string ("500mg") so existing data / OCR output keep working;
+  // this only splits it apart for the amount+unit picker and rejoins it on change.
+  function parseDose(dose) {
+    const str = String(dose || "").trim();
+    for (const unit of DOSE_UNITS) {
+      if (str.toLowerCase().endsWith(unit.toLowerCase())) {
+        const amount = str.slice(0, str.length - unit.length).trim();
+        if (/^\d+(\.\d+)?$/.test(amount)) return { amount, unit };
+      }
+    }
+    return { amount: str, unit: "" };
+  }
+
   function init() {
     document.getElementById("addRxBtn").addEventListener("click", () => {
       formMode = "add";
@@ -153,16 +169,34 @@ const Prescriptions = (() => {
         </div>` : ""}
         <div class="rx-table" id="rxItemsEditor">
           <div class="rx-row head"><span>약 이름</span><span>용량</span><span>복용</span><span>비고</span></div>
-          ${draftItems.map((it, i) => `
+          ${draftItems.map((it, i) => {
+            const dose = parseDose(it.dose);
+            const freqIsPreset = FREQUENCY_PRESETS.includes(it.frequency);
+            const showCustomFreq = it._customFreq || (!!it.frequency && !freqIsPreset);
+            return `
             <div class="rx-row">
               <input class="field-box" type="text" data-item-field="drugName" data-index="${i}" value="${Storage.escapeHtml(it.drugName || "")}" placeholder="약 이름">
-              <input class="field-box" type="text" data-item-field="dose" data-index="${i}" value="${Storage.escapeHtml(it.dose || "")}" placeholder="250mg">
-              <input class="field-box" type="text" data-item-field="frequency" data-index="${i}" value="${Storage.escapeHtml(it.frequency || "")}" placeholder="1일 3회">
+              <span class="rx-dose-input">
+                <input class="field-box" type="text" inputmode="decimal" data-item-field="doseAmount" data-index="${i}" value="${Storage.escapeHtml(dose.amount)}" placeholder="500">
+                <select class="field-box" data-item-field="doseUnit" data-index="${i}">
+                  <option value=""${dose.unit === "" ? " selected" : ""}>-</option>
+                  ${DOSE_UNITS.map(u => `<option value="${u}"${dose.unit === u ? " selected" : ""}>${u}</option>`).join("")}
+                </select>
+              </span>
+              <span class="rx-freq-input">
+                <select class="field-box" data-item-field="frequencyPreset" data-index="${i}">
+                  <option value=""${!it.frequency && !showCustomFreq ? " selected" : ""}>선택</option>
+                  ${FREQUENCY_PRESETS.map(f => `<option value="${f}"${it.frequency === f ? " selected" : ""}>${f}</option>`).join("")}
+                  <option value="__custom__"${showCustomFreq ? " selected" : ""}>직접 입력</option>
+                </select>
+                ${showCustomFreq ? `<input class="field-box" type="text" data-item-field="frequency" data-index="${i}" value="${Storage.escapeHtml(it.frequency || "")}" placeholder="예: 필요시">` : ""}
+              </span>
               <span style="display:flex; gap:6px;">
                 <input class="field-box" type="text" data-item-field="note" data-index="${i}" value="${Storage.escapeHtml(it.note || "")}" placeholder="비고" style="flex:1;">
                 <button type="button" class="btn" data-action="removeItem" data-index="${i}" title="삭제">✕</button>
               </span>
-            </div>`).join("")}
+            </div>`;
+          }).join("")}
         </div>
         <button type="button" class="btn" data-action="addItem">+ 약 추가</button>
         <div class="memo-row">
@@ -188,7 +222,23 @@ const Prescriptions = (() => {
     const el = e.target.closest("[data-item-field]");
     if (!el) return;
     const idx = Number(el.dataset.index);
-    draftItems[idx] = { ...draftItems[idx], [el.dataset.itemField]: el.value };
+    if (!draftItems[idx]) draftItems[idx] = { drugName: "", dose: "", frequency: "", note: "" };
+    const field = el.dataset.itemField;
+
+    if (field === "doseAmount" || field === "doseUnit") {
+      const current = parseDose(draftItems[idx].dose);
+      const amount = field === "doseAmount" ? el.value.trim() : current.amount;
+      const unit = field === "doseUnit" ? el.value : current.unit;
+      draftItems[idx].dose = unit && amount ? `${amount}${unit}` : amount;
+      return;
+    }
+    if (field === "frequencyPreset") {
+      draftItems[idx]._customFreq = el.value === "__custom__";
+      if (!draftItems[idx]._customFreq) draftItems[idx].frequency = el.value;
+      render();
+      return;
+    }
+    draftItems[idx] = { ...draftItems[idx], [field]: el.value };
   }
 
   // Keeps only lines that look like an actual drug line (contain Hangul), pulls the

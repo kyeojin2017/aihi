@@ -5,7 +5,7 @@ const LifeLogs = (() => {
   let editingExerciseDuration = false;
   let editingCaffeineCustom = false;
   let mealsVisible = true;
-  let draggingAlcohol = false;
+  let dragState = null;
   let periodProjectionYear = null;
 
   // 카드 아이콘 — 외부 라이브러리 없이 인라인 SVG로 그린다
@@ -33,38 +33,94 @@ const LifeLogs = (() => {
     panel.addEventListener("change", onChange);
     document.addEventListener("click", closePickersOutside);
 
-    panel.addEventListener("dragstart", e => {
-      if (e.target.closest(".alcohol-detail")) {
-        draggingAlcohol = true;
-        e.dataTransfer.effectAllowed = "move";
+    // Pointer Events (not HTML5 drag-and-drop) so this also works with touch —
+    // native DnD never fires on mobile browsers/WebViews, which is the whole
+    // point of this handle (drag the alcohol box in among the meal rows).
+    panel.addEventListener("pointerdown", e => {
+      const handle = e.target.closest('[data-drag-handle="alcohol"]');
+      if (!handle) return;
+      const box = handle.closest(".alcohol-detail");
+      if (!box) return;
+      e.preventDefault();
+      const rect = box.getBoundingClientRect();
+      dragState = {
+        pointerId: e.pointerId,
+        box,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        clientY: e.clientY,
+        zone: null
+      };
+      box.classList.add("dragging");
+      box.style.position = "fixed";
+      box.style.zIndex = "1000";
+      box.style.width = rect.width + "px";
+      box.style.left = rect.left + "px";
+      box.style.top = rect.top + "px";
+      box.style.pointerEvents = "none";
+      handle.setPointerCapture(e.pointerId);
+    });
+    panel.addEventListener("pointermove", e => {
+      if (!dragState || e.pointerId !== dragState.pointerId) return;
+      const { box, offsetX, offsetY } = dragState;
+      box.style.left = (e.clientX - offsetX) + "px";
+      box.style.top = (e.clientY - offsetY) + "px";
+      dragState.clientY = e.clientY;
+
+      panel.querySelectorAll(".drop-target-hint, .drop-target-hint-below")
+        .forEach(el => el.classList.remove("drop-target-hint", "drop-target-hint-below"));
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const zone = under && under.closest("[data-drop-zone]");
+      dragState.zone = zone || null;
+      if (zone && zone.dataset.dropZone === "meal-row") {
+        const rect = zone.getBoundingClientRect();
+        const isTopHalf = (e.clientY - rect.top) < rect.height / 2;
+        zone.classList.add(isTopHalf ? "drop-target-hint" : "drop-target-hint-below");
       }
     });
-    panel.addEventListener("dragover", e => {
-      if (draggingAlcohol && e.target.closest("[data-drop-zone]")) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-      }
-    });
-    panel.addEventListener("drop", async e => {
-      const zone = e.target.closest("[data-drop-zone]");
-      if (draggingAlcohol && zone) {
-        e.preventDefault();
+    panel.addEventListener("pointerup", async e => {
+      if (!dragState || e.pointerId !== dragState.pointerId) return;
+      const { box, zone, clientY } = dragState;
+      dragState = null;
+      box.classList.remove("dragging");
+      box.style.position = "";
+      box.style.zIndex = "";
+      box.style.width = "";
+      box.style.left = "";
+      box.style.top = "";
+      box.style.pointerEvents = "";
+      panel.querySelectorAll(".drop-target-hint, .drop-target-hint-below")
+        .forEach(el => el.classList.remove("drop-target-hint", "drop-target-hint-below"));
+
+      if (zone) {
         const { rec } = await current();
         const meals = rec.meals || [];
         let position;
         if (zone.dataset.dropZone === "meal-row") {
           const idx = Number(zone.dataset.index);
           const rect = zone.getBoundingClientRect();
-          const isTopHalf = (e.clientY - rect.top) < rect.height / 2;
+          const isTopHalf = (clientY - rect.top) < rect.height / 2;
           position = isTopHalf ? idx : idx + 1;
         } else {
           position = meals.length;
         }
-        save({ alcoholPosition: position });
+        await save({ alcoholPosition: position });
       }
-      draggingAlcohol = false;
     });
-    panel.addEventListener("dragend", () => { draggingAlcohol = false; });
+    panel.addEventListener("pointercancel", e => {
+      if (!dragState || e.pointerId !== dragState.pointerId) return;
+      const { box } = dragState;
+      dragState = null;
+      box.classList.remove("dragging");
+      box.style.position = "";
+      box.style.zIndex = "";
+      box.style.width = "";
+      box.style.left = "";
+      box.style.top = "";
+      box.style.pointerEvents = "";
+      panel.querySelectorAll(".drop-target-hint, .drop-target-hint-below")
+        .forEach(el => el.classList.remove("drop-target-hint", "drop-target-hint-below"));
+    });
   }
 
   async function current() {
@@ -566,8 +622,9 @@ const LifeLogs = (() => {
     const entries = rec.alcoholEntries || [];
     const selectedTypes = entries.map(en => en.type);
     return `
-      <div class="alcohol-detail tone-alcohol" draggable="true">
+      <div class="alcohol-detail tone-alcohol">
         <div class="metric-head-row">
+          <button type="button" class="drag-handle" data-drag-handle="alcohol" aria-label="순서 변경 (눌러서 드래그)" title="눌러서 드래그">⠿</button>
           ${iconWithPicker("alcohol", "alcohol", "alcoholTypePicker", "음주 종류 선택",
             multiTypePicker("alcoholTypePicker", ALCOHOL_TYPES, selectedTypes))}
           <span class="metric-label">음주 종류</span>
