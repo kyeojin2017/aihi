@@ -11,6 +11,15 @@ window.AppState = {
   rxFilterMonth: null
 };
 
+// Save/load actions call the Supabase client without try/catch, so a DB error
+// (bad column value, RLS denial, network drop) otherwise just rejects silently
+// and the button looks like it did nothing. Surface it instead.
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("Unhandled error:", e.reason);
+  const msg = (e.reason && (e.reason.message || e.reason.error_description)) || String(e.reason);
+  window.alert("저장/불러오기 중 오류가 발생했습니다: " + msg);
+});
+
 let currentView = "today";
 let currentSection = "diary";
 const calendarState = { year: REAL_TODAY.getFullYear(), month: REAL_TODAY.getMonth() };

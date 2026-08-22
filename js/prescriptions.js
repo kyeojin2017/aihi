@@ -1,11 +1,15 @@
 const Prescriptions = (() => {
   let formMode = null; // null | "add" | { edit: id }
   let draftItems = [];
+  let ocrBusy = false;
+  let ocrRawText = "";
 
   function init() {
     document.getElementById("addRxBtn").addEventListener("click", () => {
       formMode = "add";
       draftItems = [{ drugName: "", dose: "", frequency: "", note: "" }];
+      ocrRawText = "";
+      ocrBusy = false;
       render();
     });
     document.getElementById("rxList").addEventListener("click", onListClick);
@@ -136,6 +140,17 @@ const Prescriptions = (() => {
             </select>
           </div>
         </div>
+        <div class="form-actions" style="justify-content:flex-start;">
+          <button type="button" class="btn" data-action="scanPhoto" ${ocrBusy ? "disabled" : ""}>
+            ${ocrBusy ? "인식 중..." : "📷 약봉투 사진으로 인식"}
+          </button>
+          <input type="file" id="rxPhotoInput" accept="image/*" style="display:none;">
+        </div>
+        ${ocrRawText ? `
+        <div class="memo-row">
+          <span class="memo-label">인식된 텍스트</span>
+          <textarea class="memo-box" id="rxOcrText" rows="4">${Storage.escapeHtml(ocrRawText)}</textarea>
+        </div>` : ""}
         <div class="rx-table" id="rxItemsEditor">
           <div class="rx-row head"><span>약 이름</span><span>용량</span><span>복용</span><span>비고</span></div>
           ${draftItems.map((it, i) => `
@@ -162,10 +177,130 @@ const Prescriptions = (() => {
   }
 
   function onListChange(e) {
+    if (e.target.id === "rxPhotoInput") {
+      onPhotoSelected(e.target);
+      return;
+    }
+    if (e.target.id === "rxOcrText") {
+      ocrRawText = e.target.value;
+      return;
+    }
     const el = e.target.closest("[data-item-field]");
     if (!el) return;
     const idx = Number(el.dataset.index);
     draftItems[idx] = { ...draftItems[idx], [el.dataset.itemField]: el.value };
+  }
+
+  // Keeps only lines that look like an actual drug line (contain Hangul), pulls the
+  // longest Korean run out as the name, and the first dosage-looking number as the dose.
+  // Drops pure barcode/code noise lines that have no Korean text at all.
+  function extractDrugLines(text) {
+    const doseRe = /\d+(\.\d+)?\s?(mg|mcg|g|ml|정|캡슐|포|환)/i;
+    return text
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => {
+        const hangulRuns = line.match(/[가-힣]+(?:\s+[가-힣]+)*/g) || [];
+        const name = hangulRuns.sort((a, b) => b.length - a.length)[0];
+        if (!name || name.trim().length < 2) return null;
+        const doseMatch = line.match(doseRe);
+        return { drugName: name.trim(), dose: doseMatch ? doseMatch[0].trim() : "", frequency: "", note: "" };
+      })
+      .filter(Boolean);
+  }
+
+  // Grayscale + Otsu binarize + upscale so small/low-contrast prescription-bag print
+  // has a better chance with Tesseract (which is far more sensitive to image quality
+  // than cloud OCR). Returns a canvas ready to feed to the recognizer.
+  function preprocessForOcr(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(3, Math.max(1, 1800 / Math.max(img.width, img.height)));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const px = imageData.data;
+          const pixelCount = px.length / 4;
+          const gray = new Uint8ClampedArray(pixelCount);
+          const hist = new Array(256).fill(0);
+          for (let i = 0, j = 0; i < px.length; i += 4, j++) {
+            const g = Math.round(px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114);
+            gray[j] = g;
+            hist[g]++;
+          }
+
+          // Otsu's method: pick the threshold that best splits light/dark pixels.
+          let sum = 0;
+          for (let t = 0; t < 256; t++) sum += t * hist[t];
+          let sumB = 0, wB = 0, varMax = 0, threshold = 128;
+          for (let t = 0; t < 256; t++) {
+            wB += hist[t];
+            if (wB === 0) continue;
+            const wF = pixelCount - wB;
+            if (wF === 0) break;
+            sumB += t * hist[t];
+            const mB = sumB / wB;
+            const mF = (sum - sumB) / wF;
+            const varBetween = wB * wF * (mB - mF) * (mB - mF);
+            if (varBetween > varMax) { varMax = varBetween; threshold = t; }
+          }
+
+          for (let i = 0, j = 0; i < px.length; i += 4, j++) {
+            const v = gray[j] > threshold ? 255 : 0;
+            px[i] = px[i + 1] = px[i + 2] = v;
+          }
+          ctx.putImageData(imageData, 0, 0);
+          URL.revokeObjectURL(url);
+          resolve(canvas);
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("이미지를 열 수 없습니다.")); };
+      img.src = url;
+    });
+  }
+
+  async function onPhotoSelected(inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+    const cardEl = inputEl.closest(".card");
+    syncDraftFromDom(cardEl);
+
+    ocrBusy = true;
+    render();
+    try {
+      // TEMP: recognized fully in-browser with Tesseract.js (no server setup needed).
+      // Swap for the ocr-prescription Supabase Edge Function once it's deployed for better accuracy.
+      const canvas = await preprocessForOcr(file);
+      const worker = await Tesseract.createWorker("kor+eng");
+      const { data } = await worker.recognize(canvas);
+      await worker.terminate();
+      const text = data.text || "";
+      ocrRawText = text;
+
+      const scannedItems = extractDrugLines(text);
+      if (scannedItems.length) {
+        const hasRealDraft = draftItems.some(it => it.drugName && it.drugName.trim());
+        draftItems = hasRealDraft ? draftItems.concat(scannedItems) : scannedItems;
+      } else {
+        window.alert("사진에서 글자를 인식하지 못했습니다. 더 밝은 곳에서 다시 찍어보세요.");
+      }
+    } catch (err) {
+      window.alert("인식에 실패했습니다: " + (err && err.message ? err.message : err));
+    } finally {
+      ocrBusy = false;
+      render();
+    }
   }
 
   function syncDraftFromDom(cardEl) {
@@ -182,8 +317,14 @@ const Prescriptions = (() => {
     if (!actionEl) return;
     const action = actionEl.dataset.action;
 
-    if (action === "edit") {
+    if (action === "scanPhoto") {
+      const cardEl = actionEl.closest(".card");
+      syncDraftFromDom(cardEl);
+      cardEl.querySelector("#rxPhotoInput").click();
+    } else if (action === "edit") {
       formMode = { edit: actionEl.dataset.id };
+      ocrRawText = "";
+      ocrBusy = false;
       render();
     } else if (action === "delete") {
       if (window.confirm("이 처방전 기록을 삭제할까요?")) {
@@ -192,6 +333,8 @@ const Prescriptions = (() => {
       }
     } else if (action === "cancel") {
       formMode = null;
+      ocrRawText = "";
+      ocrBusy = false;
       render();
     } else if (action === "addItem") {
       syncDraftFromDom(actionEl.closest(".card"));
@@ -221,6 +364,8 @@ const Prescriptions = (() => {
 
       formMode = null;
       draftItems = [];
+      ocrRawText = "";
+      ocrBusy = false;
       await refresh();
     }
   }
@@ -228,6 +373,8 @@ const Prescriptions = (() => {
   function openAddForm() {
     formMode = "add";
     draftItems = [{ drugName: "", dose: "", frequency: "", note: "" }];
+    ocrRawText = "";
+    ocrBusy = false;
     render();
   }
 

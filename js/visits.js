@@ -39,6 +39,7 @@ const Visits = (() => {
         return;
       }
       if (!data.nextVisitDate) data.nextVisitDate = null;
+      if (!data.time) data.time = null;
       data.memberId = AppState.memberId;
 
       const editingId = cardEl.dataset.editingId;
